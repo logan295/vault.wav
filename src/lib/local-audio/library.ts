@@ -140,7 +140,7 @@ export async function scanVolumes(selectedVolumeIds: string[]) {
         const cached = previousByPath.get(cacheKey);
         if (cached && "bitrateKbps" in cached && cached.fileSize === fileStat.size && cached.modifiedAtMs === fileStat.mtimeMs && (cached.rekordbox === null || cached.rekordbox?.analysisVersion === 2)) return cached;
 
-        const metadata = await parseFile(filePath, { duration: true, skipCovers: true });
+        const metadata = await parseFile(filePath, { duration: true });
         const rekordboxTrack = await rekordbox?.match(relativePath);
         const durationSecs = rekordboxTrack?.durationSecs ?? metadata.format.duration ?? null;
         const bitrate = metadata.format.bitrate
@@ -156,6 +156,7 @@ export async function scanVolumes(selectedVolumeIds: string[]) {
           title: rekordboxTrack?.title || metadata.common.title?.trim() || entryTitle(relativePath),
           artist: rekordboxTrack?.artist || metadata.common.artist?.trim() || null,
           album: rekordboxTrack?.album || metadata.common.album?.trim() || null,
+          hasArtwork: !!metadata.common.picture?.length,
           durationSecs,
           sampleRate: metadata.format.sampleRate ?? null,
           bitDepth: metadata.format.bitsPerSample ?? null,

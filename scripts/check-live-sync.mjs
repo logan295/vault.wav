@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import {decodePacket,header,optIn,requestData} from './lib/tcnet.mjs';
+import {chooseDeck,matchTrack} from '../src/lib/live-sync/transport.ts';
+for(let n=0;n<24;n++)assert.equal(decodePacket(Buffer.alloc(n)),null);
+assert.equal(decodePacket(Buffer.alloc(162)),null);
+const wire=header(254,162,123);wire.writeUInt32LE(12345,24);wire.writeUInt32LE(193700,56);wire[88]=3;wire[96]=4;wire[154]=200;
+const time=decodePacket(wire).decks[0];assert.equal(time.time,12.345);assert.equal(time.duration,193.7);assert.equal(time.state,4);assert.equal(time.onAir,200);
+assert.equal(decodePacket(wire.subarray(0,150)),null);
+const metrics=header(200,122,123);metrics[24]=2;metrics[25]=2;metrics[27]=3;metrics[29]=2;metrics.writeUInt32LE(180000,32);metrics.writeUInt32LE(5000,36);metrics.writeUInt32LE(786432,40);metrics.writeUInt32LE(13500,112);metrics.writeUInt32LE(987,118);
+const m=decodePacket(metrics).metrics;assert.equal(m.rate,.75);assert.equal(m.bpm,135);assert.equal(m.master,true);assert.equal(m.trackId,987);
+metrics[25]=9;assert.equal(decodePacket(metrics),null);
+const meta=header(200,548,123);meta[24]=4;meta[25]=1;const write=(offset,text)=>[...text].forEach((c,i)=>meta.writeUInt32LE(c.codePointAt(0),offset+i*4));write(29,'Artist');write(285,'Song 🎶');meta.writeUInt32LE(13,543);assert.equal(decodePacket(meta).metadata.title,'Song 🎶');assert.equal(decodePacket(meta.subarray(0,540)),null);
+assert.equal(optIn(65024).readUInt16LE(26),65024);assert.equal(requestData(4,2)[25],2);
+const one={...time,number:1,title:'Song',artist:'Artist',trackId:1,playing:true,master:false,onAir:255};const two={...one,number:2,master:true,onAir:0};
+assert.equal(chooseDeck([one,two],'auto',null).number,2);assert.equal(chooseDeck([one,two],'1',null).number,1);assert.equal(chooseDeck([],'auto',null),null);
+assert.equal(chooseDeck([one,{...two,master:false,onAir:20}],'auto',null).number,1);
+const local={id:'a',title:'Song',artist:'Artist',durationSecs:193.7};assert.equal(matchTrack(one,[local]).id,'a');assert.equal(matchTrack(one,[local,{...local,id:'b'}]),null);assert.equal(matchTrack({...one,title:'Different'},[local]),null);
+console.log('PASS: TCNet time, metrics, metadata/Unicode, malformed input, pitch ratio, master/manual selection, unique track matching.');
+
+assert.equal(chooseDeck([{...one,master:true,playing:false},{...two,master:false,playing:true}],"auto",null).number,2,"A paused master must not block the playing second deck");

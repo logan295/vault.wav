@@ -151,7 +151,7 @@ export function UploadWorkspace() {
         <Link href="/" className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"><ArrowLeft size={14} /> Back to library</Link>
         <div className="mt-8 flex flex-wrap items-end justify-between gap-5 border-b border-border pb-7">
           <div>
-            <p className="font-mono text-[9px] uppercase tracking-[.2em] text-glass">Private lossless library</p>
+            <p className="font-mono text-xs uppercase tracking-[.2em] text-glass">Private lossless library</p>
             <h1 className="mt-2 font-display text-4xl font-bold tracking-tight">Upload WAV masters</h1>
             <p className="mt-2 text-sm text-muted-foreground">Files upload directly to private storage and resume after network interruptions.</p>
           </div>
@@ -164,13 +164,13 @@ export function UploadWorkspace() {
         {progress !== null && progress < 100 && (
           <div className="mt-6" aria-live="polite">
             <div className="h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full bg-coral transition-[width]" style={{ width: `${progress}%` }} /></div>
-            <p className="mt-2 font-mono text-[10px] text-muted-foreground">{progress.toFixed(1)}% · {status}</p>
+            <p className="mt-2 font-mono text-xs text-muted-foreground">{progress.toFixed(1)}% · {status}</p>
           </div>
         )}
         {status && (progress === null || progress >= 100) && <p className="mt-6 flex items-center gap-2 text-sm text-muted-foreground"><CheckCircle2 size={15} className="text-glass" /> {status}</p>}
 
         <section className="mt-10">
-          <h2 className="text-sm font-semibold">Your WAVs <span className="ml-2 font-mono text-[10px] text-faint">{tracks.length}</span></h2>
+          <h2 className="text-sm font-semibold">Your WAVs <span className="ml-2 font-mono text-xs text-faint">{tracks.length}</span></h2>
           {tracks.length === 0 ? (
             <div className="mt-4 rounded-xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">Choose your first WAV to test the full upload and playback path.</div>
           ) : (
@@ -181,7 +181,7 @@ export function UploadWorkspace() {
                     {playingId === track.id ? <Pause size={15} fill="currentColor" /> : <Play size={15} fill="currentColor" />}
                   </button>
                   <div className="min-w-0 flex-1"><strong className="block truncate text-sm">{track.title}</strong><span className="mt-1 block truncate text-xs text-muted-foreground">{track.artist || track.original_filename}</span></div>
-                  <div className="hidden text-right sm:block"><span className="block font-mono text-[10px] text-glass">{formatQuality(track)}</span><span className="mt-1 block font-mono text-[9px] text-faint">{formatBytes(track.file_size)}</span></div>
+                  <div className="hidden text-right sm:block"><span className="block font-mono text-xs text-glass">{formatQuality(track)}</span><span className="mt-1 block font-mono text-xs text-faint">{formatBytes(track.file_size)}</span></div>
                 </div>
               ))}
             </div>

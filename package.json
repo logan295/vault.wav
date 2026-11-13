@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/dev-with-live.mjs dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "node scripts/dev-with-live.mjs start",
+    "lint": "eslint",
+    "live:bridge": "node scripts/live-sync-bridge.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

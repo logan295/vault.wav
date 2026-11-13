@@ -34,6 +34,7 @@ export type LocalTrack = {
   title: string;
   artist: string | null;
   album: string | null;
+  hasArtwork?: boolean;
   durationSecs: number | null;
   sampleRate: number | null;
   bitDepth: number | null;

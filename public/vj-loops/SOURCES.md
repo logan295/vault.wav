@@ -45,3 +45,54 @@ The following web-optimized excerpts were imported from user-provided archives o
 | `dark-driving-tunnel.mp4` | [Driving in a dark tunnel](https://mixkit.co/free-stock-video/driving-in-a-dark-tunnel-2026/) |
 | `starry-sky-travel.mp4` | [Travel in the starry sky](https://mixkit.co/free-stock-video/travel-in-the-starry-sky-10416/) |
 | `moonlight-alien.mp4` | [Alien creature waking under moonlight](https://mixkit.co/free-stock-video/a-fragile-pale-skinned-alien-creature-wakes-up-from-his-slumber-51162/) |
+
+## Additional user-supplied clips, November 5, 2026
+
+Prepared as H.264 video at 30 fps with square pixels, silent audio tracks removed, and the original picture proportions retained.
+
+| Stage visual | Supplied filename |
+| --- | --- |
+| Amber Reactor | 15232360_1920_1080_30fps.mp4 |
+| Neon Horizon | 15294300_1920_1080_30fps.mp4 |
+| Violet Vortex | 16943367_1080_1920_30fps.mp4 |
+| Blue Turbine | 16552415_3840_2160_59fps.mp4 |
+| Silver Spiral | 15114950_1920_1080_30fps.mp4 |
+| Acid Circles | 12714064_1920_1080_30fps.mp4 |
+| Chromatic Rotor | 14422381_4096_2160_60fps.mp4 |
+| Star Corridor | 17320176-hd_1920_1080_30fps.mp4 |
+| Neon Geometry | 161917-824623504_medium.mp4 |
+
+Retired from the active catalog in this pass: Monochrome Glitch, Monochrome Forms, Varied Compositions, Abstract Sequence, Full Kaledia, Strange Kaleidoscope, Night Highway Rush, and Dark Driving Tunnel.
+
+## Additional packs supplied on November 5, 2026
+
+The Glitch pack identifies LAAK as its creator. Its readme describes the loops as free and prohibits resale. The original archive remains the source of that notice.
+
+Alpha in the Shrek MOV files is composited onto the LED wall black background. DXV sources use a YCgCo to BT.709 conversion for web playback.
+
+| Stage visual | Pack | Supplied filename |
+| --- | --- | --- |
+| Eyeinfection Spiders | EYEINFECTION | EYEINFECTION_SPIDERS_003_150BPM_LOOP.mov |
+| Eyeinfection Rotate | EYEINFECTION | EYEINFECTION_ROTATE_001_150BPM_LOOP.mov |
+| Eyeinfection Crawl | EYEINFECTION | EYEINFECTION_CRAWL_002_150BPM_LOOP.mov |
+| Glitch GAF 01 | Glitch pack | GAF_01.mp4 |
+| Glitch GAF 02 | Glitch pack | GAF_02.mp4 |
+| Glitch GAF 03 | Glitch pack | GAF_03.mp4 |
+| Glitch GAF 04 | Glitch pack | GAF_04.mp4 |
+| Glitch Showcase | Glitch pack | quick showcase.mp4 |
+| Shrek Blast | Shrek Rave | shrek_BLAST.mov |
+| Shrek Building | Shrek Rave | shrek_building.mov |
+| Shrek Dualwield | Shrek Rave | shrek_dualwield.mov |
+| Shrek Dumpy Walk | Shrek Rave | shrek_dumpy_walk.mov |
+| Shrek Fire | Shrek Rave | shrek_fire.mov |
+| Shrek Floss | Shrek Rave | shrek_floss.mov |
+| Shrek Matrix | Shrek Rave | shrek_matrix.mov |
+| Shrek Nuketown | Shrek Rave | shrek_nuketown.mov |
+| Shrek Posing | Shrek Rave | shrek_posing.mov |
+| Shrek Thrust | Shrek Rave | shrek_thrust.mov |
+| Busey Visual 2 | User clips | BuseyVisual2.mp4 |
+| Halogram | User clips | HALOGRAM.mp4 |
+| Castlegram | User clips | CASTLEGRAM.mp4 |
+| Apex | User clips | APEX.mp4 |
+
+The three EYEINFECTION DXV inputs report undecodable packets in this decoder. Browser copies retain source duration by repeating frames where decoding fails. CRAWL decoded 149 of 195 source frames, SPIDERS decoded 189 of 192, and ROTATE decoded 191 of 192.

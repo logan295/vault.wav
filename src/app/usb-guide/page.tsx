@@ -25,7 +25,7 @@ function Sidebar() {
       <Link href="/local-library" className="sidebar-link"><Usb size={16} /><span>Manage USBs</span></Link>
       <Link href="/usb-guide" aria-current="page" className="sidebar-link active"><BookOpen size={16} /><span>USB & Rekordbox guide</span></Link>
     </nav>
-    <div className="mx-5 mt-auto mb-6 rounded-lg border border-glass/15 bg-glass/[.04] p-3"><p className="font-mono text-[9px] uppercase tracking-[.15em] text-glass">Read-only by default</p><p className="mt-2 text-[11px] leading-5 text-muted-foreground">Vault reads your exported USB library without changing its files or Rekordbox database.</p></div>
+    <div className="mx-5 mt-auto mb-6 rounded-lg border border-glass/15 bg-glass/[.04] p-3"><p className="font-mono text-xs uppercase tracking-[.15em] text-glass">Read-only by default</p><p className="mt-2 text-sm leading-5 text-muted-foreground">Vault reads your exported USB library without changing its files or Rekordbox database.</p></div>
   </aside>;
 }
 
@@ -36,7 +36,7 @@ export default function UsbGuidePage() {
       <div className="mx-auto max-w-5xl">
         <Link href="/" className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground min-[761px]:hidden"><ArrowLeft size={14} /> Back to library</Link>
         <header className="mt-5 border-b border-border pb-8 min-[761px]:mt-0">
-          <p className="font-mono text-[10px] uppercase tracking-[.2em] text-glass">USB compatibility</p>
+          <p className="font-mono text-xs uppercase tracking-[.2em] text-glass">USB compatibility</p>
           <h1 className="mt-2 max-w-3xl font-display text-[clamp(34px,5vw,58px)] font-bold leading-[.98] tracking-[-.04em]">What Vault reads from your DJ USB</h1>
           <p className="mt-5 max-w-2xl text-[15px] leading-7 text-muted-foreground">A reference for supported audio files, imported Rekordbox information, and the boundaries of the current read-only workflow.</p>
         </header>
