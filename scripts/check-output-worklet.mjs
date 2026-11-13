@@ -1,0 +1,5 @@
+import vm from 'node:vm';import {readFileSync} from 'node:fs';import assert from 'node:assert/strict';
+let Processor;class Base{port={onmessage:null,messages:[],postMessage(buffer){this.messages.push(new Float32Array(buffer.slice(0)));}};}
+vm.runInNewContext(readFileSync('public/audio/native-output.js','utf8'),{AudioWorkletProcessor:Base,registerProcessor:(_,p)=>Processor=p,Float32Array});
+const p=new Processor();const input=Array.from({length:4},(_,c)=>new Float32Array(128).fill((c+1)/10));
+p.process([input]);assert.equal(p.port.messages.length,0);p.port.onmessage({data:{enabled:true}});for(let i=0;i<4;i++)p.process([input]);assert.equal(p.port.messages.length,1);const block=p.port.messages[0];assert.equal(block.length,2048);for(let i=0;i<512;i++)for(let c=0;c<4;c++)assert.equal(block[i*4+c],input[c][0]);p.port.onmessage({data:{enabled:false}});for(let i=0;i<8;i++)p.process([input]);assert.equal(p.port.messages.length,1);console.log('PASS: 4-channel native worklet packet order, 512-frame batches, disabled-output silence.');

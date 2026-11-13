@@ -41,3 +41,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local desktop packaging
+/work/
+
+/desktop/audio/womp-audio

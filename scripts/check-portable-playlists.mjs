@@ -1,0 +1,60 @@
+import { registerHooks } from 'node:module';
+import { existsSync } from 'node:fs';
+import { mkdtemp, mkdir, writeFile, readFile, rename, rm, symlink, realpath } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { createHash } from 'node:crypto';
+import assert from 'node:assert/strict';
+import sharp from 'sharp';
+registerHooks({ resolve(specifier, context, next) {
+  if(specifier === 'server-only') return { url:'data:text/javascript,export {}',shortCircuit:true };
+  if(specifier.startsWith('.') && context.parentURL?.endsWith('.ts') && !specifier.endsWith('.ts')) {
+    const url = new URL(specifier+'.ts',context.parentURL); if(existsSync(url)) return next(url.href,context);
+  }
+  return next(specifier, context);
+}});
+const root=await realpath(await mkdtemp(join(tmpdir(),'womp-test-')));
+process.env.VAULT_WAV_VOLUMES_ROOT=join(root,'volumes');
+process.env.VAULT_WAV_INDEX_PATH=join(root,'index.json');
+process.env.VAULT_WAV_PLAYLIST_PATH=join(root,'playlists.json');
+const drive=join(root,'volumes','TEST USB'); await mkdir(drive,{recursive:true});
+const volumeId=createHash('sha256').update(drive).digest('hex').slice(0,24);
+const a='a'.repeat(24), b='b'.repeat(24);
+await writeFile(process.env.VAULT_WAV_INDEX_PATH,JSON.stringify({version:3,selectedVolumeIds:[volumeId],tracks:[{id:a,volumeId,relativePath:'Music/one.wav'},{id:b,volumeId,relativePath:'Music/two.wav'}],scannedAt:null}));
+const p=await import('../src/lib/local-audio/playlists.ts');
+try {
+  const first=await p.createPlaylist('Portable mix');
+  await p.updatePlaylist(first.id,{trackIds:[b,a],usbVolumeName:'TEST USB'});
+  let portable=JSON.parse(await readFile(join(drive,'.womp',first.id+'.json'),'utf8'));
+  assert.deepEqual(portable.paths,['Music/two.wav','Music/one.wav']);
+  const picture = await sharp({create:{width:64,height:32,channels:3,background:'#1db954'}}).png().toBuffer();
+  const withCover = await p.setPlaylistCover(first.id,picture);
+  assert.ok(withCover.coverId);
+  assert.equal((await sharp(await p.readPlaylistCover(first.id)).metadata()).format,'jpeg');
+  await rm(join(root,'playlist-covers'),{recursive:true});
+  await rm(process.env.VAULT_WAV_PLAYLIST_PATH);
+  let restored=(await p.readPlaylists())[0]; assert.equal(restored.name,'Portable mix'); assert.deepEqual(restored.trackIds,[b,a]);
+  assert.equal(restored.coverId,withCover.coverId);
+  assert.ok((await p.readPlaylistCover(first.id)).length);
+  await assert.rejects(p.setPlaylistCover(first.id,Buffer.from('invalid image')),/valid JPG/);
+  await assert.rejects(p.setPlaylistCover(first.id,Buffer.alloc(6*1024*1024)),/smaller/);
+  const replaced = await p.setPlaylistCover(first.id,picture); assert.notEqual(replaced.coverId,withCover.coverId);
+  await p.setPlaylistCover(first.id,null); assert.equal(await p.readPlaylistCover(first.id),null);
+  await p.updatePlaylist(first.id,{description:'My mix',coverColor:'#123456'});
+  assert.equal((await p.readPlaylists())[0].description,'My mix');
+  await Promise.all([p.updatePlaylist(first.id,{name:'Renamed mix'}),p.createPlaylist('Concurrent')]);
+  assert.equal((await p.readPlaylists()).length,2);
+  await rename(drive,join(root,'unplugged'));
+  assert.equal((await p.readPlaylists()).find(x=>x.id===first.id).usbConnected,false);
+  await assert.rejects(p.updatePlaylist(first.id,{name:'Must not save'}),/Connect/);
+  await assert.rejects(p.deletePlaylist(first.id),/Connect/);
+  await rename(join(root,'unplugged'),drive);
+  assert.equal((await p.readPlaylists()).find(x=>x.id===first.id).name,'Renamed mix');
+  await assert.rejects(p.updatePlaylist(first.id,{trackIds:['c'.repeat(24)]}),/chosen drive/);
+  await p.updatePlaylist(first.id,{trackIds:[a,b]});
+  portable=JSON.parse(await readFile(join(drive,'.womp',first.id+'.json'),'utf8')); assert.deepEqual(portable.paths,['Music/one.wav','Music/two.wav']);
+  await p.deletePlaylist(first.id); assert.equal((await p.readPlaylists()).some(x=>x.id===first.id),false);
+  await rename(join(drive,'.womp'),join(root,'old-womp')); await symlink(join(root,'old-womp'),join(drive,'.womp'));
+  const unsafe=await p.createPlaylist('Symlink test'); await assert.rejects(p.updatePlaylist(unsafe.id,{usbVolumeName:'TEST USB'}),/directly/);
+  console.log('PASS: portable relative paths, restore without local data, ordered edits, concurrent writes, disconnect/reconnect, offline protection, cross-drive rejection, deletion, symlink protection, image conversion/USB restore/replacement/removal, upload limits, descriptions and colors.');
+} finally { await rm(root,{recursive:true,force:true}); }

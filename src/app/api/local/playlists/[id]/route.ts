@@ -3,7 +3,7 @@ import { assertLocalRequest, listTracks } from "@/lib/local-audio/library";
 import { deletePlaylist, updatePlaylist } from "@/lib/local-audio/playlists";
 
 export const runtime = "nodejs";
-const updateSchema = z.object({ name: z.string().trim().min(1).max(100).optional(), trackIds: z.array(z.string().length(24)).max(10000).optional() });
+const updateSchema = z.object({ description: z.string().trim().max(500).optional(), coverColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(), name: z.string().trim().min(1).max(100).optional(), usbVolumeName: z.string().min(1).max(255).optional(), trackIds: z.array(z.string().length(24)).max(10000).optional() });
 
 export async function PATCH(request: Request, context: RouteContext<"/api/local/playlists/[id]">) {
   try {

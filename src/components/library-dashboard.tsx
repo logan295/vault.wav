@@ -175,8 +175,8 @@ export function LibraryDashboard() {
     <div className="app-shell min-h-screen bg-background text-foreground">
       <aside className="library-sidebar">
         <div className="flex h-16 items-center gap-2.5 px-5">
-          <div className="grid h-7 w-7 place-items-center rounded-full bg-coral text-background"><Disc3 size={16} /></div>
-          <span className="font-display text-[13px] font-bold tracking-tight">vault<span className="text-coral">.wav</span></span>
+          <div className="grid h-7 w-7 place-items-center rounded-full bg-[#1DB954] text-background"><Disc3 size={16} /></div>
+          <span className="font-display text-[13px] font-bold tracking-tight"><span className="text-[#1DB954]">.womp</span></span>
         </div>
 
         <nav className="px-3" aria-label="Main navigation">

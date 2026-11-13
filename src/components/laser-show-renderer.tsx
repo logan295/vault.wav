@@ -1,5 +1,11 @@
 "use client";
+import { dropPreviewAt } from "@/lib/local-audio/drop-preview";
 
+import { VfxImport } from "./vfx-import";
+import { VenueAtmosphere, FloorSpill } from "./venue-atmosphere";
+import { STUDIO_CLIPS } from "@/lib/vfx/builtins";
+import type { VfxClip } from "@/lib/vfx/types";
+import { FingerClubVenue, FingerWingGeometry, FINGER_FIXTURES, FINGER_SCREENS, MappedVenueWalls } from "./finger-club-venue";
 import Image from "next/image";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { AdaptiveDpr, PerspectiveCamera, Sparkles } from "@react-three/drei";
@@ -21,6 +27,8 @@ import { programSong, songCueAt, showMotionAt, type SongCue } from "@/lib/local-
 import { arenaAttacks, arenaDrops } from "@/lib/local-audio/arena-drops";
 import { ARENA_PATTERNS, CEILING_PATTERNS, ArenaLasers, ArenaMovingHead, CENTER_FIXTURES, CircularArena, type ArenaFrame, type CeilingPattern } from "./circular-arena";
 
+import { laserReleaseAt, type LaserRelease } from "@/lib/local-audio/laser-policy";
+
 type Bands = { full: number[]; low: number[]; mid: number[]; high: number[] };
 type CameraPreset = "arena" | "booth" | "overhead" | "floor" | "balcony-left" | "balcony-right" | "rear-balcony" | "stage-wing";
 type RigLayout = "truss" | "ring" | "wings" | "floor";
@@ -29,13 +37,13 @@ type ScreenLayout = "cinema" | "totems" | "mosaic" | "diamonds" | "orbit";
 type ScreenChoice = "auto" | ScreenLayout;
 type ScreenContent = "auto" | "generative" | "vj-pack";
 type ShowLayer = "all" | "lasers" | "lights" | "screens";
-type StagePreset = "shrine" | "circular" | "festival" | "portal" | "cathedral" | "warehouse" | "prism" | "bunker" | "halo";
+type StagePreset = "fingerclub" | "shrine" | "circular" | "festival" | "portal" | "cathedral" | "warehouse" | "prism" | "bunker" | "halo";
 type RhythmStyle = "auto" | "banks" | "chase" | "strobe" | "open";
 type BeamShape = "straight" | "sine" | "helix" | "zigzag";
 type FloorPattern = "grid" | "rings" | "chevrons" | "circuit";
 type RenderQuality = "balanced" | "crisp" | "ultra";
 type LaserZone = "left" | "right" | "floor";
-type ScreenShape = "rect" | "circle" | "diamond";
+type ScreenShape = "rect" | "circle" | "diamond" | "chevron";
 type ScreenSpec = { position: [number, number, number]; rotation?: [number, number, number]; scale: [number, number, number]; shape?: ScreenShape; patternOffset: number };
 type MusicFeatures = { energy: number; bass: number; mids: number; highs: number; transient: number; drop: number };
 const EMPTY: Bands = { full: [], low: [], mid: [], high: [] };
@@ -43,6 +51,7 @@ const PATTERN_NAMES = ["Prism fan", "Crossfire X", "Laser tunnel", "Kinetic burs
 const CROSS_PATTERNS = [1, 4, 7, 10, 14];
 const LASER_COLOR_OPTIONS = ["#45ffe2", "#2a8cff", "#ff3d98", "#9a70ff", "#ff5b3d", "#ffd84a", "#78ff4d", "#ffffff", "#ff1744", "#00e5ff", "#ff9100", "#b6ff00"];
 const STAGE_PRESETS: Record<StagePreset, { label: string; rig: RigLayout; screens: ScreenLayout; camera: CameraPreset }> = {
+  fingerclub: { label: "Finger Club / Eye Rig", rig: "truss", screens: "diamonds", camera: "arena" },
   shrine: { label: "The Shrine", rig: "truss", screens: "cinema", camera: "arena" },
   circular: { label: "Circular arena", rig: "truss", screens: "cinema", camera: "arena" },
   festival: { label: "Festival mainstage", rig: "truss", screens: "cinema", camera: "arena" },
@@ -53,7 +62,7 @@ const STAGE_PRESETS: Record<StagePreset, { label: string; rig: RigLayout; screen
   bunker: { label: "Bass bunker", rig: "floor", screens: "totems", camera: "arena" },
   halo: { label: "Halo arena", rig: "ring", screens: "orbit", camera: "arena" },
 };
-const VJ_LOOPS = [
+const VJ_LOOPS = [...STUDIO_CLIPS, ...[
   ["eyeinfection-spiders", "Eyeinfection Spiders", "EYEINFECTION"],
   ["eyeinfection-rotate", "Eyeinfection Rotate", "EYEINFECTION"],
   ["eyeinfection-crawl", "Eyeinfection Crawl", "EYEINFECTION"],
@@ -84,7 +93,7 @@ const VJ_LOOPS = [
   ["kaleidoscope-lights", "Kaleidoscope Lights"], ["abstract-figures", "Abstract Figures"], ["kaleidoscope-texture", "Prismatic Texture"], ["blue-triangle-tunnel", "Blue Triangle Tunnel"], ["red-line-tunnels", "Red Line Tunnels"], ["triangle-vj-loop", "Triangle Flight"], ["neon-shapes", "Neon Shapes"], ["red-neon-tunnel", "Red Neon Tunnel"], ["violet-rhombus", "Violet Rhombus"], ["mirror-shapes", "Mirror Shapes"], ["abstract-sequence", "Abstract Sequence"],
   ["alien-lab", "Alien Laboratory"], ["psychedelic-ink", "Psychedelic Ink"], ["wormhole", "Deep Space Wormhole"], ["space-nebula", "Bass Nebula"], ["orange-liquid", "Orange Hypnosis"], ["blue-liquid", "Blue Hypnosis"], ["motion-kaleidoscope", "Motion Kaleidoscope"], ["pink-light-tunnel", "Pink Light Tunnel"],
   ["exploring-cosmos", "Exploring the Cosmos"], ["fractal-space-tunnel", "Fractal Space Tunnel"], ["fluorescent-nebula", "Fluorescent Nebula"], ["liquid-galaxy", "Liquid Galaxy"], ["intergalactic-journey", "Intergalactic Journey"], ["night-city-drive", "Night City Drive"], ["surreal-dancer", "Surreal Dancer"], ["starry-sky-travel", "Starry Sky Travel"], ["moonlight-alien", "Moonlight Alien"],
-].map(([id, label, group]) => ({ id, label, group: group || "Library", src: `/vj-loops/${id}.mp4`, poster: `/vj-loops/thumbs/${id}.jpg` }));
+].map(([id, label, group]) => ({ id, label, group: group || "Library", src: `/vj-loops/${id}.mp4`, poster: `/vj-loops/thumbs/${id}.jpg` }))];
 const LASER_BODY = new THREE.CylinderGeometry(.13, .17, .3, 12);
 const LASER_LENS = new THREE.CircleGeometry(.075, 16);
 const LASER_VOLUME = new THREE.ConeGeometry(.105, 8.1, 16, 1, true);
@@ -97,11 +106,12 @@ const LED_FRAGMENT = `
   varying vec2 vUv;
   uniform float uTime, uEnergy, uBass, uMids, uHighs, uPattern, uPower, uImpact;
   uniform vec3 uA, uB, uC;
+  uniform float uStudio, uSaturation, uMirror;
   float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
   float noise(vec2 p){vec2 i=floor(p),f=fract(p); f=f*f*(3.-2.*f); return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.)),f.x),f.y);}
   float fbm(vec2 p){float v=0.,a=.5; for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+17.1;a*=.48;}return v;}
   void main(){
-    vec2 uv=vUv-.5; uv.x*=1.8;
+    vec2 uv=vUv-.5; if(uMirror>.5) uv.x=abs(uv.x); uv.x*=1.8;
     float t=uTime*(.09+uEnergy*.16); float a=atan(uv.y,uv.x); float r=length(uv);
     float petals=5.+mod(uPattern,5.);
     float warp=sin(a*petals+t*3.+sin(r*18.-t*4.))*(.06+.12*uMids);
@@ -134,6 +144,13 @@ const LED_FRAGMENT = `
     vec3 col=mix(uA,uB,.5+.5*sin(tunnel+a*2.)); col=mix(col,uC,spokes*(.2+.55*uHighs));
     float background=.08+.22*fbm(q*3.+vec2(t*.03,-t*.02))+.14*(.5+.5*cos(r*13.-t));
     col*=background+pulse*(.85+uEnergy*1.05)+bloom*.72+uImpact*.45;
+    if(uStudio>-.5){
+      if(uStudio<.5){float rings=pow(max(0.,cos(log(r+.035)*18.-t*3.)),20.);float metal=.15+.85*pow(abs(cos(a*6.+sin(t*.2))),12.);col=vec3(.55,.72,.82)*(rings*metal+exp(-r*7.)*.12);}
+      else if(uStudio<1.5){vec2 q=uv*vec2(9.,6.);float bars=step(.91,fract(q.x+sin(t*.15)*2.))*step(.2,fract(q.y-t*.4));float frames=pow(max(0.,cos(max(abs(uv.x),abs(uv.y)*1.8)*35.-t*1.3)),28.);col=vec3(bars*.7+frames)*(.4+uImpact*.6);}
+      else if(uStudio<2.5){float silk=sin(uv.y*14.+sin(uv.x*4.+t*.2)*4.+fbm(uv*3.+t*.06)*7.);float folds=pow(.5+.5*silk,5.);col=mix(vec3(.02,.12,.2),mix(uA,uB,.5+.5*sin(uv.x*2.+t*.1)),folds)*(.25+folds);}
+      else{float halo=exp(-abs(r-(.24+sin(a*3.+t*.2)*.015))*160.);float dust=step(.995,hash(floor((uv+vec2(t*.006,0.))*280.)))*smoothstep(.22,.5,r);col=mix(uA,vec3(1.),.7)*(halo+dust*.6)*(1.+uImpact*.3);}
+    }
+    col=mix(vec3(dot(col,vec3(.2126,.7152,.0722))),col,uSaturation);
     float scan=.88+.12*sin(vUv.y*950.); float pixels=.9+.1*step(.42,hash(floor(vUv*vec2(420.,190.))));
     float edge=smoothstep(.72,.28,length(vec2(uv.x*.58,uv.y)));
     gl_FragColor=vec4(col*scan*pixels*(.22+.78*edge)*uPower,1.);
@@ -201,10 +218,10 @@ function fixtureOrigin(index: number, count: number, layout: RigLayout, wash = f
   return [lane * (wash ? 1.14 : .72), wash ? 4.42 : 4.08 + center * .7 + depthBand * .08, wash ? -4.48 : -2.38 - center * .82 - depthBand * .18];
 }
 
-function CameraRig({ preset, circular, shrine }: { preset: CameraPreset; circular: boolean; shrine: boolean }) {
+function CameraRig({ preset, circular, shrine, club = false }: { preset: CameraPreset; circular: boolean; shrine: boolean; club?: boolean }) {
   const size = useThree((state) => state.size);
   const camera = useRef<THREE.PerspectiveCamera>(null);
-  const target = useMemo(() => circular ? new THREE.Vector3(...(preset === "booth" ? (shrine ? [0, 2.8, -10] : [0, 1.85, -6.8]) : preset === "overhead" ? [0, 19, 19] : shrine ? [0, 6.3, 27] : [0, 3.4, 24]) as [number, number, number]) : preset === "booth" ? new THREE.Vector3(0, 2.2, 7.2) : preset === "overhead" ? new THREE.Vector3(0, 10.5, 1.2) : new THREE.Vector3(0, 3.25, 9.2), [preset, circular, shrine]);
+  const target = useMemo(() => club && preset === "arena" ? new THREE.Vector3(0,3.5,17) : circular ? new THREE.Vector3(...(preset === "booth" ? (shrine ? [0, 2.8, -10] : [0, 1.85, -6.8]) : preset === "overhead" ? [0, 19, 19] : shrine ? [0, 6.3, 27] : [0, 3.4, 24]) as [number, number, number]) : preset === "booth" ? new THREE.Vector3(0, 2.2, 7.2) : preset === "overhead" ? new THREE.Vector3(0, 10.5, 1.2) : new THREE.Vector3(0, 3.25, 9.2), [preset, circular, shrine, club]);
   const venueViews: Partial<Record<CameraPreset, [number,number,number]>> = shrine ? { floor:[0,1.75,16], "balcony-left":[-11.3,6.9,13], "balcony-right":[11.3,6.9,13], "rear-balcony":[0,7.1,28], "stage-wing":[9,2.7,-10] } : {floor:[0,1.7,9],"balcony-left":[-8,5,8],"balcony-right":[8,5,8],"rear-balcony":[0,6,14],"stage-wing":[6,2,-3]};
   const viewTarget=venueViews[preset];
   const alternateTarget=useMemo(()=>viewTarget ? new THREE.Vector3(...viewTarget) : null,[viewTarget]);
@@ -212,7 +229,7 @@ function CameraRig({ preset, circular, shrine }: { preset: CameraPreset; circula
   const fitFov = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(25)) / Math.min(1, aspect)));
   useFrame(() => {
     camera.current?.position.lerp(alternateTarget ?? target, .055);
-    camera.current?.lookAt(0, preset === "overhead" ? .2 : shrine ? 5.4 : 2.05, circular ? (preset === "booth" || preset === "stage-wing" ? 16 : -10) : -3.05);
+    camera.current?.lookAt(0, preset === "overhead" ? .2 : shrine ? 5.4 : club ? 3.1 : 2.05, circular ? (preset === "booth" || preset === "stage-wing" ? 16 : -10) : -3.05);
   });
   return <PerspectiveCamera ref={camera} makeDefault fov={preset === "booth" ? 50 : Math.min(108, fitFov)} position={[0, 3.25, 9.2]} />;
 }
@@ -239,17 +256,19 @@ function laserPathGeometry(shape: BeamShape, core = false) {
   return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), 64, core ? .0028 : .008, core ? 5 : 7, false);
 }
 
-function LedWall({ position, rotation = [0, 0, 0], scale = [1, 1, 1], shape = "rect", energy, bass, mids, highs, impact, pattern, time, power, arenaFrame }: { arenaFrame?: ArenaFrame; position: [number, number, number]; rotation?: [number, number, number]; scale?: [number, number, number]; shape?: ScreenShape; energy: number; bass: number; mids: number; highs: number; impact: number; pattern: number; time: number; power: number }) {
+function LedWall({ position, rotation = [0, 0, 0], scale = [1, 1, 1], shape = "rect", energy, bass, mids, highs, impact, pattern, time, power, arenaFrame, visualSpeed = 1, visualFreeze = false, visualSaturation = 1, visualMirror = false, studioLook = -1 }: { visualSpeed?: number; visualFreeze?: boolean; visualSaturation?: number; visualMirror?: boolean; studioLook?: number; arenaFrame?: ArenaFrame; position: [number, number, number]; rotation?: [number, number, number]; scale?: [number, number, number]; shape?: ScreenShape; energy: number; bass: number; mids: number; highs: number; impact: number; pattern: number; time: number; power: number }) {
   const material = useRef<THREE.ShaderMaterial>(null);
-  const palette = paletteFor(pattern);
+  const palette = useMemo(()=>paletteFor(pattern).map(color=>new THREE.Color(color)),[pattern]);
   const uniforms = useMemo(() => ({
-    uTime: { value: 0 }, uEnergy: { value: 0 }, uBass: { value: 0 }, uMids: { value: 0 }, uHighs: { value: 0 }, uPattern: { value: 0 }, uPower: { value: 0 }, uImpact: { value: 0 },
+    uStudio: {value:-1}, uSaturation: {value:1}, uMirror: {value:0}, uTime: { value: 0 }, uEnergy: { value: 0 }, uBass: { value: 0 }, uMids: { value: 0 }, uHighs: { value: 0 }, uPattern: { value: 0 }, uPower: { value: 0 }, uImpact: { value: 0 },
     uA: { value: new THREE.Color("#45ffe2") }, uB: { value: new THREE.Color("#2a8cff") }, uC: { value: new THREE.Color("#f5fbff") },
   }), []);
   useFrame((_, delta) => {
     if (!material.current) return;
     const u = material.current.uniforms; const ease = 1 - Math.exp(-delta * 4.2);
-    u.uTime.value = arenaFrame ? showMotionAt(arenaFrame.current.cue,arenaFrame.current.time,arenaFrame.current.bpm)*60/arenaFrame.current.bpm : THREE.MathUtils.lerp(u.uTime.value, time, ease * .42);
+    u.uStudio.value=studioLook;u.uSaturation.value=visualSaturation;u.uMirror.value=Number(visualMirror);
+    if (!visualFreeze) u.uTime.value = arenaFrame ? showMotionAt(arenaFrame.current.cue,arenaFrame.current.time,arenaFrame.current.bpm)*60/arenaFrame.current.bpm : THREE.MathUtils.lerp(u.uTime.value, time, ease * .42);
+    if (!visualFreeze) u.uTime.value *= visualSpeed;
     u.uEnergy.value = THREE.MathUtils.lerp(u.uEnergy.value, energy, ease);
     u.uBass.value = THREE.MathUtils.lerp(u.uBass.value, bass, ease);
     u.uMids.value = THREE.MathUtils.lerp(u.uMids.value, mids, ease);
@@ -257,25 +276,25 @@ function LedWall({ position, rotation = [0, 0, 0], scale = [1, 1, 1], shape = "r
     u.uImpact.value = arenaFrame ? arenaFrame.current.hit : THREE.MathUtils.lerp(u.uImpact.value, impact, 1 - Math.exp(-delta * 12));
     u.uPattern.value = arenaFrame ? (arenaFrame.current.dropBeat !== null ? 4 : (arenaFrame.current.cue?.top ?? Math.floor(arenaFrame.current.beat / 4)) % 16) : THREE.MathUtils.lerp(u.uPattern.value, pattern, ease * .25);
     u.uPower.value = THREE.MathUtils.lerp(u.uPower.value, power, ease);
-    u.uA.value.lerp(new THREE.Color(palette[0]), ease * .35); u.uB.value.lerp(new THREE.Color(palette[1]), ease * .35); u.uC.value.lerp(new THREE.Color(palette[2]), ease * .35);
+    u.uA.value.lerp(palette[0], ease * .35); u.uB.value.lerp(palette[1], ease * .35); u.uC.value.lerp(palette[2], ease * .35);
   });
   return <group position={position} rotation={rotation} scale={scale}>
     <group rotation={shape === "diamond" ? [0, 0, Math.PI / 4] : undefined}>
-      {shape === "circle" ? <><mesh position={[0, 0, -.08]} rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[1.36, 1.36, .18, 48]} /><meshStandardMaterial color="#111719" metalness={.78} roughness={.24} /></mesh><mesh renderOrder={3} position={[0, 0, .025]}><circleGeometry args={[1.23, 64]} /><shaderMaterial ref={material} uniforms={uniforms} vertexShader={LED_VERTEX} fragmentShader={LED_FRAGMENT} toneMapped={false} depthTest={!!arenaFrame} /></mesh></> : <><mesh position={[0, 0, -.08]}><boxGeometry args={shape === "diamond" ? [3.96, 3.96, .18] : [5.08, 2.68, .18]} /><meshStandardMaterial color="#111719" metalness={.78} roughness={.24} /></mesh><mesh renderOrder={3} position={[0, 0, .025]}><planeGeometry args={shape === "diamond" ? [3.7, 3.7, 1, 1] : [4.82, 2.42, 1, 1]} /><shaderMaterial ref={material} uniforms={uniforms} vertexShader={LED_VERTEX} fragmentShader={LED_FRAGMENT} toneMapped={false} depthTest={!!arenaFrame} /></mesh>{shape !== "diamond" && <mesh position={[0, -1.4, -.02]}><boxGeometry args={[5.18, .08, .22]} /><meshStandardMaterial color="#252e30" metalness={.92} roughness={.18} /></mesh>}</>}
+      {shape === "chevron" ? <><mesh position={[0,0,-.03]} scale={[1.035,1.025,1]}><FingerWingGeometry/><meshStandardMaterial color="#090a0d" side={THREE.DoubleSide}/></mesh><mesh position={[0,0,.025]} renderOrder={3}><FingerWingGeometry/><shaderMaterial ref={material} uniforms={uniforms} vertexShader={LED_VERTEX} fragmentShader={LED_FRAGMENT} toneMapped={false} side={THREE.DoubleSide}/></mesh></> : shape === "circle" ? <><mesh position={[0, 0, -.08]} rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[1.36, 1.36, .18, 48]} /><meshStandardMaterial color="#111719" metalness={.78} roughness={.24} /></mesh><mesh renderOrder={3} position={[0, 0, .025]}><circleGeometry args={[1.23, 64]} /><shaderMaterial ref={material} uniforms={uniforms} vertexShader={LED_VERTEX} fragmentShader={LED_FRAGMENT} toneMapped={false} depthTest={!!arenaFrame} /></mesh></> : <><mesh position={[0, 0, -.08]}><boxGeometry args={shape === "diamond" ? [3.96, 3.96, .18] : [5.08, 2.68, .18]} /><meshStandardMaterial color="#111719" metalness={.78} roughness={.24} /></mesh><mesh renderOrder={3} position={[0, 0, .025]}><planeGeometry args={shape === "diamond" ? [3.7, 3.7, 1, 1] : [4.82, 2.42, 1, 1]} /><shaderMaterial ref={material} uniforms={uniforms} vertexShader={LED_VERTEX} fragmentShader={LED_FRAGMENT} toneMapped={false} depthTest={!!arenaFrame} /></mesh>{shape !== "diamond" && <mesh position={[0, -1.4, -.02]}><boxGeometry args={[5.18, .08, .22]} /><meshStandardMaterial color="#252e30" metalness={.92} roughness={.18} /></mesh>}</>}
     </group>
   </group>;
 }
 
-function VjWall({ src, position, rotation = [0, 0, 0], scale = [1, 1, 1], shape = "rect", playing, speed, impact, power, arenaFrame, fit }: {
+function VjWall({ src, position, rotation = [0, 0, 0], scale = [1, 1, 1], shape = "rect", playing, speed, impact, power, arenaFrame, fit, visualSpeed = 1, visualFreeze = false, visualSaturation = 1, visualMirror = false }: { visualSpeed?: number; visualFreeze?: boolean; visualSaturation?: number; visualMirror?: boolean;
   arenaFrame?: ArenaFrame; src: string; position: [number, number, number]; rotation?: [number, number, number];
   scale?: [number, number, number]; shape?: ScreenShape; playing: boolean; speed: number; impact: number; power: number; fit: VideoFit;
 }) {
   const aspect = (shape === "rect" ? 4.82 / 2.42 : 1) * Math.abs(scale[0] / scale[1]);
-  const video = <VfxVideoMaterial src={src} playing={playing} aspect={aspect} diamond={shape === "diamond"} fit={fit}
+  const video = <VfxVideoMaterial rate={visualSpeed} saturation={visualSaturation} mirror={visualMirror} src={src} playing={playing && !visualFreeze} aspect={aspect} diamond={shape === "diamond"} fit={fit}
     clock={arenaFrame ? () => arenaFrame.current : undefined} power={power} hit={() => arenaFrame?.current.hit ?? impact} speed={speed} depthTest={!!arenaFrame} />;
   return <group position={position} rotation={rotation} scale={scale}>
     <group rotation={shape === "diamond" ? [0, 0, Math.PI / 4] : undefined}>
-      {shape === "circle" ? <>
+      {shape === "chevron" ? <><mesh position={[0,0,-.03]} scale={[1.035,1.025,1]}><FingerWingGeometry/><meshStandardMaterial color="#090a0d" side={THREE.DoubleSide}/></mesh><mesh position={[0,0,.025]} renderOrder={3}><FingerWingGeometry/>{video}</mesh></> : shape === "circle" ? <>
         <mesh position={[0, 0, -.08]} rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[1.36, 1.36, .18, 48]} /><meshStandardMaterial color="#111719" metalness={.78} roughness={.24} /></mesh>
         <mesh position={[0, 0, .025]} renderOrder={3}><circleGeometry args={[1.23, 64]} />{video}</mesh>
       </> : <>
@@ -312,7 +331,7 @@ function LaserCone({ frame, color, index, origin, energy, bass, mids, highs, imp
     const audioEase = 1 - Math.exp(-delta * 6); smooth.current.energy = THREE.MathUtils.lerp(smooth.current.energy, energy, audioEase); smooth.current.bass = THREE.MathUtils.lerp(smooth.current.bass, bass, audioEase); smooth.current.mids = THREE.MathUtils.lerp(smooth.current.mids, mids, audioEase); smooth.current.highs = THREE.MathUtils.lerp(smooth.current.highs, highs, audioEase); const se = smooth.current.energy; const sb = smooth.current.bass; const sm = smooth.current.mids; const sh = smooth.current.highs;
     if (Math.abs(time - previousTime.current) > 1.2) phase.current = time; previousTime.current = time;
     easedSpeed.current = THREE.MathUtils.lerp(easedSpeed.current, speed, 1 - Math.exp(-delta * 12)); phase.current += Math.min(delta, .05) * easedSpeed.current;
-    if (frame) phase.current=showMotionAt(frame.current.cue,frame.current.time,frame.current.bpm)*.4;
+    if (frame && Math.abs(frame.current.time - songTime) > 1.2) phase.current = showMotionAt(frame.current.cue, frame.current.time, frame.current.bpm) * speed;
     const motionPhase = phase.current; const side = index % 2 ? 1 : -1; const lane = (index - 5.5) / 5.5; let tx = -.25; let ty = 0; let tz = 0;
     if (beamPath.current) beamPath.current.rotation.y = beamShape === "straight" ? 0 : motionPhase * (beamShape === "helix" ? .72 : .34) + index * .22;
     const layoutEase = 1 - Math.exp(-delta * 2.4); group.current.position.x = THREE.MathUtils.lerp(group.current.position.x, origin[0], layoutEase); group.current.position.y = THREE.MathUtils.lerp(group.current.position.y, origin[1], layoutEase); group.current.position.z = THREE.MathUtils.lerp(group.current.position.z, origin[2], layoutEase);
@@ -346,7 +365,7 @@ function LaserCone({ frame, color, index, origin, energy, bass, mids, highs, imp
     const subFocus = THREE.MathUtils.clamp((sb - sm * .48 - sh * .18) * 2.35, 0, 1); const sharedSway = Math.sin(songTime * (.38 + sb * .42)) * subFocus * (.22 + spread * .34) * motion;
     tz += sharedSway; if (pattern !== 16) ty += Math.cos(motionPhase * .17) * subFocus * .055; tx -= Math.abs(sharedSway) * subFocus * .06;
     const easing = 1 - Math.exp(-delta * (12 + easedSpeed.current * 8)); group.current.rotation.x = THREE.MathUtils.lerp(group.current.rotation.x, tx, easing); group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, ty, easing); group.current.rotation.z = THREE.MathUtils.lerp(group.current.rotation.z, tz, easing);
-    easedGate.current = THREE.MathUtils.lerp(easedGate.current, impact > .58 ? 1 : gate, 1 - Math.exp(-delta * (gate ? 65 : 45))); const live = easedGate.current;
+    easedGate.current = THREE.MathUtils.lerp(easedGate.current, impact > .58 ? 1 : gate, 1 - Math.exp(-delta * (gate ? 65 : 45))); const live = (frame?.current.laserManual ? 1 : easedGate.current) * (frame?.current.laserLevel ?? 1);
     const material = beam.current.material as THREE.MeshBasicMaterial; material.opacity = Math.min(.19, (.018 + se * .07 + (index % 3 === 0 ? sb * .028 : sh * .024) + impact * .055) * intensity) * live;
     beam.current.scale.x = beam.current.scale.z = (.34 + se * .14 + impact * .05) * beamWidth;
     line.current.scale.x = line.current.scale.z = beamWidth; core.current.scale.x = core.current.scale.z = .8 + beamWidth * .2;
@@ -426,20 +445,23 @@ function BeatDeck({ beat, downbeat, color }: { beat: number; downbeat: number; c
   </group>;
 }
 
-function LaserStage({ bands, progress, duration, timelineTime, playing, bpm, beatOffset, spread, intensity, lighting, haze, ledPower, motion, density, rhythmStyle, patternOverride, blackout, layout, screenLayout, screenContent, selectedVj, layer, laserColors, lightColors, beamWidth, beamShape, stagePreset, floorPattern, floorPower, floorDepth, lightMovement, lightSpeed, zonePatterns, arenaCues, arenaDropTimes, arenaAttackTimes, ceilingColor, ceilingPattern, playbackSample, timingTrim, inlineSample, deskFlash, laserSpeed, songProgram, videoFit }: { bands: Bands; progress: number; duration: number; timelineTime?: number; playing: boolean; bpm: number; beatOffset: number; spread: number; intensity: number; lighting: number; haze: number; ledPower: number; motion: number; density: number; rhythmStyle: RhythmStyle; patternOverride: number | null; blackout: boolean; layout: RigLayout; screenLayout: ScreenLayout; screenContent: Exclude<ScreenContent, "auto">; selectedVj: string | null; layer: ShowLayer; laserColors: string[]; lightColors: string[]; beamWidth: number; beamShape: BeamShape; stagePreset: StagePreset; floorPattern: FloorPattern; floorPower: number; floorDepth: number; lightMovement: number; lightSpeed: number; zonePatterns: Record<LaserZone, number | null>; arenaCues: ArenaCue[]; arenaDropTimes: number[]; arenaAttackTimes: number[]; ceilingColor: string; ceilingPattern: CeilingPattern; playbackSample: PlaybackSample | null; timingTrim: number; deskFlash: boolean; laserSpeed: number; songProgram: SongCue[]; videoFit: VideoFit; inlineSample?: React.RefObject<PlaybackSample | null> }) {
+function LaserStage({ bands, progress, duration, timelineTime, playing, bpm, beatOffset, spread, intensity, lighting, haze, ledPower, motion, density, rhythmStyle, patternOverride, blackout, layout, screenLayout, screenContent, selectedVj, layer, laserColors, lightColors, beamWidth, beamShape, stagePreset, floorPattern, floorPower, floorDepth, lightMovement, lightSpeed, zonePatterns, arenaCues, arenaDropTimes, arenaAttackTimes, ceilingColor, ceilingPattern, playbackSample, timingTrim, inlineSample, deskFlash, laserSpeed, songProgram, videoFit, ambient = .12, laserRelease = "drops", exposure = 1, fogDensity = .018, floorSpill = .4, visualSpeed = 1, visualFreeze = false, visualSaturation = 1, visualMirror = false, studioLook = -1, dropBars = 4, dropPunch = .5, linkScreens = true, visualBars = 8, mapping = 0, mappingMode = 0, mappingScale = 1, mappingSpeed = .5, eyesOnly = false, dropPreviewStartedAt = null }: { dropPreviewStartedAt?: number | null; mapping?: number; mappingMode?: number; mappingScale?: number; mappingSpeed?: number; eyesOnly?: boolean; linkScreens?: boolean; visualBars?: number; dropBars?: number; dropPunch?: number; exposure?: number; fogDensity?: number; floorSpill?: number; bloom?: number; visualSpeed?: number; visualFreeze?: boolean; visualSaturation?: number; visualMirror?: boolean; studioLook?: number; ambient?: number; laserRelease?: LaserRelease; bands: Bands; progress: number; duration: number; timelineTime?: number; playing: boolean; bpm: number; beatOffset: number; spread: number; intensity: number; lighting: number; haze: number; ledPower: number; motion: number; density: number; rhythmStyle: RhythmStyle; patternOverride: number | null; blackout: boolean; layout: RigLayout; screenLayout: ScreenLayout; screenContent: Exclude<ScreenContent, "auto">; selectedVj: string | null; layer: ShowLayer; laserColors: string[]; lightColors: string[]; beamWidth: number; beamShape: BeamShape; stagePreset: StagePreset; floorPattern: FloorPattern; floorPower: number; floorDepth: number; lightMovement: number; lightSpeed: number; zonePatterns: Record<LaserZone, number | null>; arenaCues: ArenaCue[]; arenaDropTimes: number[]; arenaAttackTimes: number[]; ceilingColor: string; ceilingPattern: CeilingPattern; playbackSample: PlaybackSample | null; timingTrim: number; deskFlash: boolean; laserSpeed: number; songProgram: SongCue[]; videoFit: VideoFit; inlineSample?: React.RefObject<PlaybackSample | null> }) {
   const songTime = timelineTime ?? progress * duration;
-  const localTime = useRef(songTime); const previousProgress = useRef(progress); const stage = useRef<THREE.Group>(null);
-  useEffect(() => { if (Math.abs(progress - previousProgress.current) > .002 || !playing) localTime.current = songTime; previousProgress.current = progress; }, [progress, songTime, playing]);
-  useFrame((_, delta) => { if (playing) localTime.current += Math.min(delta, .05); if (stage.current) stage.current.position.y = Math.sin(localTime.current * (bpm / 60) * Math.PI) * .025; });
-  const arenaFrame: ArenaFrame = useRef({ time: 0, beat: 0, hit: 0, attack: 0, dropBeat: null, cue: undefined, attackIndex: -1, bpm });
+  const arenaFrame: ArenaFrame = useRef({ time: 0, beat: 0, hit: 0, attack: 0, dropBeat: null, cue: undefined, attackIndex: -1, bpm, laserLevel: 0, laserManual: false });
   useFrame(() => {
+    const demo=dropPreviewAt(dropPreviewStartedAt,Date.now(),bpm);
+    if(demo){
+      const level=blackout || laserRelease==="off" || demo.dropBeat===null ? 0 : 1+Math.exp(-demo.dropBeat*2)*dropPunch;
+      Object.assign(arenaFrame.current,{time:demo.time,beat:demo.beat,dropBeat:demo.dropBeat,bpm,cue:undefined,attackIndex:Math.floor(demo.beat),attack:demo.hit,hit:demo.hit,laserLevel:level,laserManual:false});
+      return;
+    }
     const sample = inlineSample?.current ?? playbackSample;
     const elapsed = sample?.advancing && playing
       ? THREE.MathUtils.clamp((performance.timeOrigin + performance.now() - sample.sampledAt) / 1000, 0, 2.5)
       : 0;
     const time = THREE.MathUtils.clamp((sample?.time ?? songTime) + elapsed * (sample?.rate ?? 1) - timingTrim, 0, duration || Infinity);
     const beat = Math.max(0, time - beatOffset) * bpm / 60;
-    const drop = arenaDropTimes.find((at) => time >= at && time < at + 120 / bpm);
+    const drop = arenaDropTimes.find((at) => time >= at && time < at + dropBars * 240 / bpm);
     const dropBeat = drop === undefined ? null : (time - drop) * bpm / 60;
     let low = 0;
     let high = arenaAttackTimes.length;
@@ -453,36 +475,40 @@ function LaserStage({ bands, progress, duration, timelineTime, playing, bpm, bea
     const manual = arenaCues.some((cue) => beat >= cue.beat && beat - cue.beat < .15) ? .9 : 0;
     const pulse = Math.exp(-(beat % 1) * 12) * .65;
     const attack = dropBeat === null ? 0 : Math.exp(-dropBeat * 4);
-    Object.assign(arenaFrame.current, { time, beat, dropBeat, bpm, cue: songCueAt(songProgram, time), attackIndex: low - 1, attack: onset, hit: deskFlash ? 1 : playing ? Math.max(onset, pulse, attack, manual) : 0 });
+    const currentCue = songCueAt(songProgram, time);
+    const releaseLevel = blackout ? 0 : deskFlash ? 1 : laserReleaseAt(laserRelease, time, bpm, arenaDropTimes, currentCue?.section, dropBars);
+    const laserLevel = releaseLevel * (1 + (dropBeat === null ? 0 : Math.exp(-dropBeat * 2) * dropPunch));
+    Object.assign(arenaFrame.current, { laserLevel, laserManual: laserRelease === "open" || deskFlash, time, beat, dropBeat, bpm, cue: songCueAt(songProgram, time), attackIndex: low - 1, attack: onset, hit: deskFlash ? 1 : playing ? Math.max(onset, pulse, attack, manual) : 0 });
   }, -1);
   const features = featuresAt(bands, progress); const { energy, bass, mids, highs, transient, drop } = features; const impact = Math.max(drop, transient * .72); const cue = cueFor(songTime, 1, bpm, energy, bass, mids, highs, drop, beatOffset); const pattern = patternOverride ?? (isSubDrop(features) ? 16 : cue.pattern);
   const showBeat = Math.max(0, songTime - beatOffset) * bpm / 60; const phraseRamp = (showBeat % 32) / 32; const phraseCurve = phraseRamp * phraseRamp * (3 - 2 * phraseRamp); const beatPhase = showBeat % 1; const beatHit = playing ? Math.pow(1 - beatPhase, 9) : 0; const downbeatHit = Math.floor(showBeat) % 4 === 0 ? beatHit : 0; const rhythmicImpact = Math.max(impact, beatHit * .34, downbeatHit * .72);
   const sectionMotion = cue.section === "Impact" ? 1.82 : cue.section.includes("drop") || cue.section === "Drop I" ? 1.36 : cue.section === "Build" ? .48 + phraseCurve * 1.42 : cue.section === "Lift" ? .98 : cue.section === "Breakdown" ? .34 : cue.section === "Outro" ? .28 : .42;
-  const colors = laserColors.length ? laserColors : paletteFor(pattern); const lightPalette = lightColors.length ? lightColors : paletteFor(pattern + 2); const circular = (stagePreset === "circular" || stagePreset === "shrine"); const shrine = stagePreset === "shrine"; const backScreens = shrine ? [{ position: [0, 7.1, -15.5], scale: [1.7, 4.7, 1], patternOffset: 0 }] as ScreenSpec[] : circular && screenLayout === "cinema" ? [{ position: [0, 3.9, -11.7], scale: [2.55, 1.75, 1], patternOffset: 0 }, { position: [-8.1, 3.1, -10.7], rotation: [0, .24, 0], scale: [.64, 1.24, 1], patternOffset: 0 }, { position: [8.1, 3.1, -10.7], rotation: [0, -.24, 0], scale: [.64, 1.24, 1], patternOffset: 0 }] as ScreenSpec[] : circular ? screensFor(screenLayout).map((screen): ScreenSpec => ({ ...screen, position: [screen.position[0] * 1.85, screen.position[1] + .65, -11.7], scale: [screen.scale[0] * 1.65, screen.scale[1] * 1.4, 1] })) : screensFor(screenLayout); const screens: ScreenSpec[] = circular && !shrine ? [...backScreens, { position: [0, 5.4, -4.49], scale: [1.05, .68, 1], shape: "diamond", patternOffset: 0 }] : backScreens; const programmedCue = songCueAt(songProgram, songTime); const mediaScene = programmedCue ? programmedCue.top + programmedCue.bottom : Math.floor(showBeat / 64); const showLasers = layer === "all" || layer === "lasers"; const showLights = (layer === "all" || layer === "lights") && ceilingPattern !== "Off"; const showScreens = layer === "all" || layer === "screens"; const zonePattern = (zone: LaserZone, fallback: number) => zonePatterns[zone] ?? fallback;
+  const colors = laserColors.length ? laserColors : paletteFor(pattern); const lightPalette = lightColors.length ? lightColors : paletteFor(pattern + 2); const circular = (stagePreset === "circular" || stagePreset === "shrine" || stagePreset === "fingerclub"); const shrine = stagePreset === "shrine"; const fingerclub = stagePreset === "fingerclub"; const backScreens = fingerclub ? FINGER_SCREENS : shrine ? [{ position: [0, 7.1, -15.5], scale: [1.7, 4.7, 1], patternOffset: 0 }] as ScreenSpec[] : circular && screenLayout === "cinema" ? [{ position: [0, 3.9, -11.7], scale: [2.55, 1.75, 1], patternOffset: 0 }, { position: [-8.1, 3.1, -10.7], rotation: [0, .24, 0], scale: [.64, 1.24, 1], patternOffset: 0 }, { position: [8.1, 3.1, -10.7], rotation: [0, -.24, 0], scale: [.64, 1.24, 1], patternOffset: 0 }] as ScreenSpec[] : circular ? screensFor(screenLayout).map((screen): ScreenSpec => ({ ...screen, position: [screen.position[0] * 1.85, screen.position[1] + .65, -11.7], scale: [screen.scale[0] * 1.65, screen.scale[1] * 1.4, 1] })) : screensFor(screenLayout); const screens: ScreenSpec[] = circular && !shrine && !fingerclub ? [...backScreens, { position: [0, 5.4, -4.49], scale: [1.05, .68, 1], shape: "diamond", patternOffset: 0 }] : backScreens; const mediaScene = Math.floor(showBeat / (visualBars * 4)); const showLasers = layer === "all" || layer === "lasers"; const showLights = (layer === "all" || layer === "lights") && ceilingPattern !== "Off"; const showScreens = layer === "all" || layer === "screens"; const zonePattern = (zone: LaserZone, fallback: number) => zonePatterns[zone] ?? fallback;
   const centerLasers = Array.from({ length: 12 }, (_, index) => { const column = index % 4; const row = Math.floor(index / 4); const lane = column - 1.5; const active = zonePattern(index < 6 ? "left" : "right", (pattern + 17 + row * 2) % PATTERN_NAMES.length); const arch = 1 - Math.abs(lane) / 1.5; return <LaserCone frame={arenaFrame} key={`center-crown-${index}`} index={index} beamWidth={beamWidth * (1.05 + row * .12)} beamShape={beamShape} origin={[lane * (.72 + row * .18), 3.05 + row * .62 + arch * .42, -3.28 - row * .72 - arch * .28]} color={colors[(index + 2) % colors.length]} energy={energy} bass={bass} mids={mids} highs={highs} impact={blackout ? 0 : rhythmicImpact} spread={spread * (.7 + row * .12)} intensity={intensity * (1.08 - row * .08)} motion={motion} time={songTime * .14 + index * .17} songTime={songTime} pattern={active} speed={playing ? cue.speed * sectionMotion * laserSpeed * (.9 + row * .18) : 0} gate={blackout ? 0 : (playing ? fixtureGate(showBeat, index, 12, active, false, rhythmStyle) : 1) * fixtureDensityGate(index, 12, density)} upward={row === 0} />; });
-  return <group ref={stage}>
-    <ambientLight intensity={showLights ? (circular ? .32 : .08) + lighting * .035 : .025} /><directionalLight position={[0, 8, 3]} intensity={showLights ? (circular ? .38 : .16) + lighting * .08 : .04} color="#bce8e3" />
+  return <group>
+    <VenueAtmosphere exposure={exposure} fogDensity={fogDensity} /><FloorSpill frame={arenaFrame} power={blackout ? 0 : floorSpill * ledPower} color={lightPalette[0]} large={circular} shrine={shrine} /><ambientLight intensity={blackout ? 0 : ambient * .5} /><directionalLight castShadow shadow-mapSize={[1024,1024]} shadow-camera-left={-20} shadow-camera-right={20} shadow-camera-top={20} shadow-camera-bottom={-20} shadow-camera-far={70} shadow-bias={-.0005} position={[0, 8, 3]} intensity={blackout ? 0 : ambient * .7} color="#bce8e3" />
     {showLights && <><spotLight position={[-4.6, 5.4, .5]} color={lightPalette[0]} intensity={(.7 + energy * 2.1) * lighting * (blackout ? 0 : 1) * fixtureGate(showBeat, 0, 3, pattern, true, rhythmStyle)} angle={.3} penumbra={.82} distance={15} /><spotLight position={[4.6, 5.4, .5]} color={lightPalette[1 % lightPalette.length]} intensity={(.65 + mids * 1.9) * lighting * (blackout ? 0 : 1) * fixtureGate(showBeat, 1, 3, pattern, true, rhythmStyle)} angle={.3} penumbra={.82} distance={15} /><spotLight position={[0, 5.2, -4.6]} color={lightPalette[2 % lightPalette.length]} intensity={(.4 + bass * 1.5) * lighting * (blackout ? 0 : 1) * fixtureGate(showBeat, 2, 3, pattern, true, rhythmStyle)} angle={.42} penumbra={.9} distance={12} /></>}
-    {shrine ? <ShrineVenue power={blackout || !showLights ? 0 : lighting} colors={lightPalette} pattern={ceilingPattern} speed={lightSpeed} movement={lightMovement} haze={haze} playing={playing} frame={arenaFrame} /> : circular ? <CircularArena power={blackout || !showLights ? 0 : lighting} color={ceilingColor} pattern={ceilingPattern} colors={lightPalette} speed={lightSpeed} haze={haze} movement={lightMovement} playing={playing} frame={arenaFrame} /> : <><StageArchitecture preset={stagePreset} /><DimensionalFloor pattern={floorPattern} color={colors[0]} energy={energy} bass={bass} power={blackout ? 0 : floorPower} depth={floorDepth} /></>}{shrine ? null : circular ? <><group position={[-7, 0, 5]}><Audience /></group><group position={[7, 0, 5]}><Audience /></group><group position={[0, 0, 12]}><Audience /></group></> : <Audience />}
-    {circular && !shrine && showLights && [0, 1, 2, 3].flatMap((row) => [-1, 1].map((side) =>
+    {fingerclub ? <FingerClubVenue frame={arenaFrame} ambient={blackout ? 0 : ambient} power={blackout || !showLights ? 0 : lighting} haze={haze} colors={lightPalette} pattern={ceilingPattern} speed={lightSpeed} movement={lightMovement} mapping={blackout ? 0 : mapping} mappingMode={mappingMode} mappingScale={mappingScale} mappingSpeed={mappingSpeed}/> : shrine ? <ShrineVenue ambient={blackout ? 0 : ambient} power={blackout || !showLights ? 0 : lighting} colors={lightPalette} pattern={ceilingPattern} speed={lightSpeed} movement={lightMovement} haze={haze} playing={playing} frame={arenaFrame} /> : circular ? <CircularArena ambient={blackout ? 0 : ambient} power={blackout || !showLights ? 0 : lighting} color={ceilingColor} pattern={ceilingPattern} colors={lightPalette} speed={lightSpeed} haze={haze} movement={lightMovement} playing={playing} frame={arenaFrame} /> : <><StageArchitecture preset={stagePreset} /><DimensionalFloor pattern={floorPattern} color={colors[0]} energy={energy} bass={bass} power={blackout ? 0 : floorPower} depth={floorDepth} /></>}{shrine ? null : circular ? <><group position={[-7, 0, 5]}><Audience /></group><group position={[7, 0, 5]}><Audience /></group><group position={[0, 0, 12]}><Audience /></group></> : <Audience />}
+    {circular && !shrine && !fingerclub && showLights && [0, 1, 2, 3].flatMap((row) => [-1, 1].map((side) =>
       <ArenaMovingHead key={`${row}:${side}`} position={[side * 4, 7.87, -4 + row * 7]} side={side} row={row}
         color={lightPalette[row % lightPalette.length]} power={blackout ? 0 : lighting} haze={haze}
         movement={lightMovement} speed={lightSpeed} pattern={ceilingPattern} playing={playing} frame={arenaFrame} />,
     ))}
-    {circular && !shrine && showLights && CENTER_FIXTURES.filter((_, index) => index < 4).map((origin, index) =>
+    {circular && !shrine && !fingerclub && showLights && CENTER_FIXTURES.filter((_, index) => index < 4).map((origin, index) =>
       <ArenaMovingHead key={`center-head-${index}`} position={[origin[0], origin[1], origin[2] - .22]}
         side={Math.sign(origin[0])} row={index % 2} color={lightPalette[index % lightPalette.length]}
         power={blackout ? 0 : lighting} haze={haze} movement={lightMovement} speed={lightSpeed} pattern={ceilingPattern} playing={playing} frame={arenaFrame} />,
     )}
+    {!fingerclub && mapping > 0 && !blackout && <MappedVenueWalls frame={arenaFrame} power={mapping} mode={mappingMode} scale={mappingScale} speed={mappingSpeed} large={circular} shrine={shrine}/>}
     {!circular && !blackout && (showLasers || showLights) && <BeatDeck beat={beatHit} downbeat={downbeatHit} color={colors[pattern % colors.length]} />}
     {!blackout && showScreens && screens.map((screen, index) => <group key={`${screenLayout}-screen-${index}`}>
-      {screenContent === "vj-pack" ? <VjWall fit={videoFit} arenaFrame={arenaFrame} src={selectedVj || VJ_LOOPS[(mediaScene + index * 3) % VJ_LOOPS.length].src} position={screen.position} rotation={screen.rotation} scale={screen.scale} shape={screen.shape} playing={playing} speed={cue.speed * sectionMotion} impact={rhythmicImpact} power={ledPower} /> : <LedWall arenaFrame={arenaFrame} position={screen.position} rotation={screen.rotation} scale={screen.scale} shape={screen.shape} energy={energy} bass={bass} mids={mids} highs={highs} impact={rhythmicImpact} pattern={(pattern + screen.patternOffset) % 16} time={songTime + index * .65} power={ledPower * (index ? .9 : 1)} />}
-      {!(circular && screen.shape === "diamond") && <ScreenPracticalLights screen={screen} color={lightPalette[(index + pattern) % lightPalette.length]} energy={energy} impact={rhythmicImpact} power={(blackout ? 0 : ledPower) * fixtureGate(showBeat, index, screens.length, pattern, true, rhythmStyle)} />}
+      {screenContent === "vj-pack" ? <VjWall visualSpeed={visualSpeed} visualFreeze={visualFreeze} visualSaturation={visualSaturation} visualMirror={visualMirror} fit={videoFit} arenaFrame={arenaFrame} src={selectedVj || STUDIO_CLIPS[(mediaScene + (linkScreens ? 0 : index * 3)) % STUDIO_CLIPS.length].src} position={screen.position} rotation={screen.rotation} scale={screen.scale} shape={screen.shape} playing={playing} speed={cue.speed * sectionMotion} impact={rhythmicImpact} power={ledPower} /> : <LedWall visualSpeed={visualSpeed} visualFreeze={visualFreeze} visualSaturation={visualSaturation} visualMirror={visualMirror} studioLook={studioLook} arenaFrame={arenaFrame} position={screen.position} rotation={screen.rotation} scale={screen.scale} shape={screen.shape} energy={energy} bass={bass} mids={mids} highs={highs} impact={rhythmicImpact} pattern={(pattern + screen.patternOffset) % 16} time={songTime + index * .65} power={ledPower * (index ? .9 : 1)} />}
+      {!(circular && (screen.shape === "diamond" || screen.shape === "chevron")) && <ScreenPracticalLights screen={screen} color={lightPalette[(index + pattern) % lightPalette.length]} energy={energy} impact={rhythmicImpact} power={(blackout ? 0 : ledPower) * fixtureGate(showBeat, index, screens.length, pattern, true, rhythmStyle)} />}
     </group>)}
     {!circular && <><Truss position={[0, 4.68, -4.5]} scale={[5.65, 1, 1]} /><Truss position={[0, 4.42, -2.55]} scale={[4.8, 1, 1]} />
     <Truss position={[-6.35, 2.55, -4.5]} scale={[2.45, 1, 1]} vertical /><Truss position={[6.35, 2.55, -4.5]} scale={[2.45, 1, 1]} vertical />
     <SpeakerStack x={-6.05} /><SpeakerStack x={6.05} /></>}
-    {showLasers && circular && !blackout && <ArenaLasers key={stagePreset} fixtures={shrine ? SHRINE_LASERS : undefined} rays={shrine ? 17 : 5} speed={laserSpeed} flash={deskFlash} frame={arenaFrame} playing={playing} width={beamWidth} pattern={patternOverride} banks={{ top: zonePatterns.left, bottom: zonePatterns.floor }} cues={arenaCues} intensity={intensity} spread={spread} density={density} motion={motion} colors={laserColors} />}
+    {showLasers && circular && !blackout && <ArenaLasers key={stagePreset} eyeCount={fingerclub ? 4 : 0} eyesOnly={fingerclub && eyesOnly} fixtures={fingerclub ? FINGER_FIXTURES : shrine ? SHRINE_LASERS : undefined} rays={fingerclub ? 15 : shrine ? 17 : 5} speed={laserSpeed} flash={deskFlash} frame={arenaFrame} playing={playing} width={beamWidth} pattern={patternOverride} banks={{ top: zonePatterns.left, bottom: zonePatterns.floor }} cues={arenaCues} intensity={intensity} spread={spread} density={density} motion={motion} colors={laserColors} />}
     {showLasers && !circular && centerLasers}
     {showLasers && !circular && <>{Array.from({ length: 16 }, (_, index) => { const side: LaserZone = index < 8 ? "left" : "right"; const fallback = pattern === 16 ? 16 : CROSS_PATTERNS.includes(pattern) ? CROSS_PATTERNS[Math.floor(index / 4) % CROSS_PATTERNS.length] : (pattern + Math.floor(index / 4) * 3) % 16; const active = zonePattern(side, fallback); return <LaserCone frame={arenaFrame} key={`air-${index}`} index={index % 12} beamWidth={beamWidth} beamShape={beamShape} origin={fixtureOrigin(index, 16, layout)} color={colors[index % colors.length]} energy={energy} bass={bass} mids={mids} highs={highs} impact={blackout ? 0 : rhythmicImpact} spread={spread} intensity={intensity} motion={motion} time={songTime * .12 + index * .09} songTime={songTime} pattern={active} speed={playing ? cue.speed * sectionMotion * laserSpeed * (.78 + index % 4 * .18) : 0} gate={blackout ? 0 : active === 16 ? 1 : (playing ? fixtureGate(showBeat, index, 16, active, false, rhythmStyle) : 1) * fixtureDensityGate(index, 16, density)} />; })}{Array.from({ length: 12 }, (_, index) => { const active = zonePattern("floor", pattern === 16 ? 16 : (pattern + 5 + Math.floor(index / 3)) % 16); return <LaserCone frame={arenaFrame} key={`floor-air-${index}`} index={index} beamWidth={beamWidth} beamShape={beamShape} origin={[(index - 5.5) * .95, .32, -1.75 - index % 3 * .58]} color={colors[(index + 1) % colors.length]} energy={energy} bass={bass} mids={mids} highs={highs} impact={blackout ? 0 : rhythmicImpact} spread={spread * .9} intensity={intensity * .92} motion={motion} time={songTime * .1 + index * .13} songTime={songTime} pattern={active} speed={playing ? cue.speed * sectionMotion * laserSpeed * (.56 + index % 3 * .18) : 0} gate={blackout ? 0 : active === 16 ? 1 : (playing ? fixtureGate(showBeat, index, 12, active + 2, false, rhythmStyle) : 1) * fixtureDensityGate(index, 12, density)} upward />; })}</>}
     {showLights && !circular && <>{Array.from({ length: 12 }, (_, index) => <ArenaMovingHead key={`wash-${index}`} position={fixtureOrigin(index, 12, layout, true)} side={index % 2 ? 1 : -1} row={Math.floor(index / 2) % 4} color={lightPalette[(index + 1) % lightPalette.length]} power={blackout ? 0 : lighting * fixtureDensityGate(index, 12, density)} haze={haze} movement={lightMovement} speed={lightSpeed} pattern={ceilingPattern} playing={playing} frame={arenaFrame} />)}{Array.from({ length: 13 }, (_, index) => <mesh key={`bar-${index}`} position={[(index - 6) * .84, 2.15 + Math.sin(index * 1.8) * .38, -5.08]}><boxGeometry args={[.58, .055 + mids * .18, .05]} /><meshBasicMaterial color={lightPalette[(index + pattern) % lightPalette.length]} transparent opacity={Math.min(.72, (.08 + energy * .42 + (pattern === 3 ? highs * .2 : 0)) * lighting) * (blackout ? 0 : 1) * fixtureDensityGate(index, 13, density) * fixtureGate(showBeat, index, 13, pattern + 1, true, rhythmStyle)} blending={THREE.AdditiveBlending} /></mesh>)}<Sparkles count={Math.round(18 + haze * 58)} scale={[12, 5.5, 9]} position={[0, 2.4, -2]} size={.45 + highs * .8} speed={playing ? .08 + mids * .16 : 0} opacity={blackout ? 0 : .04 + haze * .1} color="#d5fff9" /></>}
@@ -495,37 +521,47 @@ type StageDisplay = {
   scene: ComponentProps<typeof LaserStage>;
 };
 
-function StageCanvas({ preset, renderQuality, scene, inlineSample }: StageDisplay & { inlineSample?: React.RefObject<PlaybackSample | null> }) {
-  const circular = scene.stagePreset === "circular" || scene.stagePreset === "shrine";
+function PreviewRefresh({enabled}:{enabled:boolean}) {
+  const invalidate=useThree(state=>state.invalidate);
+  useEffect(()=>{if(!enabled)return;const timer=window.setInterval(invalidate,1000/24);return()=>window.clearInterval(timer);},[enabled,invalidate]);
+  return null;
+}
+
+function StageCanvas({ preset, renderQuality, scene, inlineSample, preview = false }: StageDisplay & { preview?: boolean; inlineSample?: React.RefObject<PlaybackSample | null> }) {
+  const circular = scene.stagePreset === "circular" || scene.stagePreset === "shrine" || scene.stagePreset === "fingerclub";
   const qualityDpr: [number, number] = renderQuality === "ultra" ? [1.5, 3] : renderQuality === "crisp" ? [1.15, 2.25] : [.85, 1.5];
-  return <Canvas dpr={qualityDpr} shadows={renderQuality !== "balanced"} gl={{ antialias: true, alpha: false, powerPreference: "high-performance", toneMapping: THREE.ACESFilmicToneMapping, outputColorSpace: THREE.SRGBColorSpace }}><color attach="background" args={["#010203"]} /><fog attach="fog" args={["#010203", circular ? 18 : 10, circular ? 58 : 27]} /><CameraRig preset={preset} circular={circular} shrine={scene.stagePreset === "shrine"} />{renderQuality === "balanced" && <AdaptiveDpr />}<LaserStage {...scene} inlineSample={inlineSample} />{renderQuality !== "balanced" && <EffectComposer multisampling={renderQuality === "ultra" ? 8 : 4}><Bloom intensity={circular ? .29 + scene.intensity * .18 : .48 + scene.intensity * .25} luminanceThreshold={.24} luminanceSmoothing={.42} mipmapBlur /><Vignette eskil={false} offset={.14} darkness={.62} /></EffectComposer>}</Canvas>;
+  return <Canvas frameloop={preview ? "demand" : "always"} dpr={preview ? [.6,.8] : qualityDpr} shadows={!preview && renderQuality !== "balanced"} gl={{ antialias: true, alpha: false, powerPreference: "high-performance", toneMapping: THREE.ACESFilmicToneMapping, outputColorSpace: THREE.SRGBColorSpace }}><PreviewRefresh enabled={preview}/><color attach="background" args={["#010203"]} /><fogExp2 attach="fog" args={["#030508", scene.fogDensity ?? .018]} /><CameraRig preset={preset} circular={circular} shrine={scene.stagePreset === "shrine"} club={scene.stagePreset === "fingerclub"} />{renderQuality === "balanced" && <AdaptiveDpr />}<LaserStage {...scene} inlineSample={inlineSample} />{!preview && renderQuality !== "balanced" && <EffectComposer multisampling={renderQuality === "ultra" ? 8 : 4}><Bloom intensity={scene.bloom ?? .35} luminanceThreshold={.65} luminanceSmoothing={.42} mipmapBlur /><Vignette eskil={false} offset={.14} darkness={.62} /></EffectComposer>}</Canvas>;
 }
 
 export function DetachedLaserStage() {
   const [display, setDisplay] = useState<StageDisplay | null>(null);
+  const [connectionLost, setConnectionLost] = useState(false);
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get("session");
     if (!id || typeof BroadcastChannel === "undefined") return;
     const channel = new BroadcastChannel(`vault-stage-${id}`);
     let lastUpdate = 0;
-    channel.onmessage = ({ data }: MessageEvent<StageDisplay | null | "ready">) => {
+    channel.onmessage = ({ data }: MessageEvent) => {
+      if (data?.type === "tick") { lastUpdate = Date.now(); setConnectionLost(false); setDisplay(previous => previous ? { ...previous, scene: { ...previous.scene, ...data.scene } } : null); channel.postMessage({ type: "stage-alive" }); return; }
       // Other viewers announce readiness on this channel too.
-      if (data === "ready" || (data !== null && (typeof data !== "object" || !data.scene))) return;
+      if (data === "ready" || data?.type === "stage-alive" || (data !== null && (typeof data !== "object" || !data.scene))) return;
       lastUpdate = Date.now();
-      setDisplay(data);
+      setDisplay(data); setConnectionLost(false);
+      channel.postMessage({ type: "stage-alive" });
     };
     channel.postMessage("ready");
     const watchdog = window.setInterval(() => {
       if (Date.now() - lastUpdate > 3500) {
-        setDisplay(null);
+        setConnectionLost(true);
         channel.postMessage("ready");
       }
     }, 1000);
     return () => { window.clearInterval(watchdog); channel.close(); };
   }, []);
 
-  return <main className="fixed inset-0 bg-[#010203]" aria-label="Vault stage display">
-    {display ? <StageCanvas {...display} /> : <div className="grid h-full place-items-center px-6 text-center text-sm text-white/75" role="status">Waiting for the Vault laser show. Open the Laser Show in the control tab.</div>}
+  return <main className="fixed inset-0 bg-[#010203]" aria-label=".womp stage display">
+    {connectionLost && <div role="status" className="absolute inset-x-0 top-0 z-10 bg-black/75 p-3 text-center text-xs text-amber-200">Controller connection interrupted. Return to the control window to reconnect.</div>}
+    {display ? <StageCanvas {...display} /> : <div className="grid h-full place-items-center px-6 text-center text-sm text-white/75" role="status">Waiting for the .womp laser show. Open the Laser Show in the control tab.</div>}
   </main>;
 }
 
@@ -544,7 +580,31 @@ export function LaserShowRenderer({ trackId: localTrackId, progress: localProgre
   const [consoleOpen, setConsoleOpen] = useState(false);
   const [vfxPack, setVfxPack] = useState("All packs");
   const [videoFit, setVideoFit] = useState<VideoFit>("fit");
-  const [laserSpeed, setLaserSpeed] = useState(1);
+  const [laserSpeed, setLaserSpeed] = useState(.35);
+  const [laserRelease, setLaserRelease] = useState<LaserRelease>("drops");
+  const [ambient, setAmbient] = useState(.12);
+  const [mapping,setMapping] = useState(0);
+  const [mappingMode,setMappingMode] = useState(0);
+  const [mappingScale,setMappingScale] = useState(1);
+  const [mappingSpeed,setMappingSpeed] = useState(.5);
+  const [eyesOnly,setEyesOnly] = useState(false);
+  const [dropBars,setDropBars] = useState(4);
+  const [dropPunch,setDropPunch] = useState(.5);
+  const [dropPreviewStartedAt,setDropPreviewStartedAt]=useState<number|null>(null);
+  const [exposure,setExposure] = useState(1);
+  const [fogDensity,setFogDensity] = useState(.018);
+  const [floorSpill,setFloorSpill] = useState(.4);
+  const [bloom,setBloom] = useState(.35);
+  const [linkScreens,setLinkScreens] = useState(true);
+  const [visualBars,setVisualBars] = useState(8);
+  const [visualSpeed,setVisualSpeed] = useState(1);
+  const [visualFreeze,setVisualFreeze] = useState(false);
+  const [visualSaturation,setVisualSaturation] = useState(1);
+  const [visualMirror,setVisualMirror] = useState(false);
+  const [studioLook,setStudioLook] = useState(-1);
+  const [importedVfx,setImportedVfx] = useState<VfxClip[]>([]);
+  const availableVfx = useMemo(()=>[...importedVfx,...VJ_LOOPS],[importedVfx]);
+  useEffect(()=>{let active=true;void fetch("/api/local/vfx").then(response=>response.json()).then(body=>{if(active&&Array.isArray(body.clips))setImportedVfx(body.clips);}).catch(()=>undefined);return()=>{active=false;};},[]);
   const [shapeTarget, setShapeTarget] = useState<LaserTarget>("both");
   const [master, setMaster] = useState(1);
   const [deskFlash, setDeskFlash] = useState(false);
@@ -556,8 +616,9 @@ export function LaserShowRenderer({ trackId: localTrackId, progress: localProgre
   const [floorPattern, setFloorPattern] = useState<FloorPattern>("grid"); const [floorPower, setFloorPower] = useState(.72); const [floorDepth, setFloorDepth] = useState(.65); const [lightMovement, setLightMovement] = useState(.72); const [renderQuality, setRenderQuality] = useState<RenderQuality>("balanced"); const [zonePatterns, setZonePatterns] = useState<Record<LaserZone, number | null>>({ left: null, right: null, floor: null });
   useEffect(() => { if (!trackId) return; let active = true; void fetch(`/api/local/tracks/${trackId}/waveform`, { cache: "no-store" }).then(async (response) => { const body = await response.json(); if (!response.ok) throw new Error(body.error); if (active) { setError(""); setAnalysis({ trackId, bpm: Number(body.bpm) || 0, beatOffset: Number(body.beatOffsetSecs) || 0, bands: Array.isArray(body.peaks) ? { full: body.peaks, low: body.peaks, mid: body.peaks, high: body.peaks } : body.peaks }); } }).catch((reason: Error) => { if (active) setError(reason.message); }); return () => { active = false; }; }, [trackId]);
   useEffect(() => { if (!expanded) return; const previous = document.body.style.overflow; document.body.style.overflow = "hidden"; const close = (event: KeyboardEvent) => { if (event.key === "Escape") setExpanded(false); }; window.addEventListener("keydown", close); return () => { document.body.style.overflow = previous; window.removeEventListener("keydown", close); }; }, [expanded]);
-  const importedTempo = player.currentTrack?.id === trackId ? player.currentTrack.rekordbox?.bpm : null; const tempo = importedTempo || bpm || (analysis?.trackId === trackId ? analysis.bpm : 0) || 120; const arenaAttackTimes = useMemo(() => arenaAttacks(bands.low, bands.full, duration), [bands, duration]); const arenaDropTimes = useMemo(() => arenaDrops(bands.low, bands.full, duration), [bands, duration]); const songProgram = useMemo(() => programSong(bands, duration, tempo, beatOffset, arenaDropTimes, trackId ?? ""), [bands, duration, tempo, beatOffset, arenaDropTimes, trackId]); const currentFeatures = featuresAt(bands, progress); const showBeat = Math.max(0, (external ? live.time : progress * duration) - beatOffset) * tempo / 60; const resolvedLayout: RigLayout = rigChoice === "auto" ? "truss" : rigChoice; const resolvedScreenLayout: ScreenLayout = screenChoice === "auto" ? "cinema" : screenChoice; const resolvedScreenContent: Exclude<ScreenContent, "auto"> = screenContent === "auto" ? Math.floor(showBeat / 64) % 2 ? "vj-pack" : "generative" : screenContent;
-  const isDrop = (stagePreset === "circular" || stagePreset === "shrine")
+  const importedTempo = player.currentTrack?.id === trackId ? player.currentTrack.rekordbox?.bpm : null; const tempo = importedTempo || bpm || (analysis?.trackId === trackId ? analysis.bpm : 0) || 120; const arenaAttackTimes = useMemo(() => arenaAttacks(bands.low, bands.full, duration), [bands, duration]); const arenaDropTimes = useMemo(() => arenaDrops(bands.low, bands.full, duration, tempo), [bands, duration, tempo]); const songProgram = useMemo(() => programSong(bands, duration, tempo, beatOffset, arenaDropTimes, trackId ?? ""), [bands, duration, tempo, beatOffset, arenaDropTimes, trackId]); const currentFeatures = featuresAt(bands, progress); const showBeat = Math.max(0, (external ? live.time : progress * duration) - beatOffset) * tempo / 60; const resolvedLayout: RigLayout = rigChoice === "auto" ? "truss" : rigChoice; const resolvedScreenLayout: ScreenLayout = screenChoice === "auto" ? "cinema" : screenChoice; const resolvedScreenContent: Exclude<ScreenContent, "auto"> = screenContent === "auto" ? Math.floor(showBeat / 64) % 2 ? "vj-pack" : "generative" : screenContent;
+  useEffect(()=>{if(dropPreviewStartedAt===null)return;const timeout=window.setTimeout(()=>setDropPreviewStartedAt(null),20000*60/Math.max(60,tempo));return()=>window.clearTimeout(timeout);},[dropPreviewStartedAt,tempo]);
+  const isDrop = (stagePreset === "circular" || stagePreset === "shrine" || stagePreset === "fingerclub")
     ? arenaDropTimes.some((at) => progress * duration >= at && progress * duration < at + 120 / tempo)
     : currentFeatures.drop > .5;
   const [lightSpeed, setLightSpeed] = useState(1);
@@ -595,6 +656,8 @@ export function LaserShowRenderer({ trackId: localTrackId, progress: localProgre
 
   const [displaySession, setDisplaySession] = useState<string | null>(null);
   const [displayError, setDisplayError] = useState("");
+  const [stageConnected, setStageConnected] = useState(false);
+  const lastStageAck = useRef(0);
   const displayWindow = useRef<Window | null>(null);
   const displayChannel = useRef<BroadcastChannel | null>(null);
   const activeLook = patternOverride === null && zonePatterns.right === null
@@ -606,7 +669,7 @@ export function LaserShowRenderer({ trackId: localTrackId, progress: localProgre
     setZonePatterns({ left: look.top, right: null, floor: look.bottom });
   }
   const flashLive = deskFlash && !blackout && master > 0;
-  const display: StageDisplay = { preset, renderQuality, scene: { bands, progress, duration, timelineTime: external ? live.time : progress * duration, playing: playing && !reducedMotion, bpm: tempo, beatOffset, spread, intensity: intensity * master, lighting: lighting * master, haze, ledPower: ledPower * master, motion: motionAmount, density: fixtureDensity, rhythmStyle, patternOverride, blackout: blackout || master === 0, layout: resolvedLayout, screenLayout: resolvedScreenLayout, screenContent: resolvedScreenContent, selectedVj, layer, laserColors, lightColors, beamWidth, beamShape, stagePreset, floorPattern, floorPower, floorDepth, lightMovement, lightSpeed, zonePatterns, arenaCues: automaticShow ? [] : arenaCues, arenaDropTimes, arenaAttackTimes, ceilingColor, ceilingPattern, playbackSample: null, timingTrim, deskFlash: flashLive, laserSpeed, songProgram, videoFit } };
+  const display: StageDisplay = { preset, renderQuality, scene: { bands, progress, duration, timelineTime: external ? live.time : progress * duration, playing: (playing || dropPreviewStartedAt!==null) && !reducedMotion, dropPreviewStartedAt, bpm: tempo, beatOffset, spread, intensity: intensity * master, lighting: lighting * master, haze, ledPower: ledPower * master, motion: motionAmount, density: fixtureDensity, rhythmStyle, patternOverride, blackout: blackout || master === 0, layout: resolvedLayout, screenLayout: resolvedScreenLayout, screenContent: resolvedScreenContent, selectedVj, layer, laserColors, lightColors, beamWidth, beamShape, stagePreset, floorPattern, floorPower, floorDepth, lightMovement, lightSpeed, zonePatterns, arenaCues: automaticShow ? [] : arenaCues, arenaDropTimes, arenaAttackTimes, ceilingColor, ceilingPattern, playbackSample: null, timingTrim, deskFlash: flashLive, laserSpeed, songProgram, videoFit, ambient: ambient * master, laserRelease, exposure, fogDensity, floorSpill, bloom, visualSpeed, visualFreeze, visualSaturation, visualMirror, studioLook, dropBars, dropPunch, linkScreens, visualBars, mapping: mapping * master, mappingMode, mappingScale, mappingSpeed, eyesOnly } };
   const latestDisplay = useRef(display);
   const { samplePlayback } = player;
   const inlineSample = useRef<PlaybackSample | null>(null);
@@ -615,22 +678,27 @@ export function LaserShowRenderer({ trackId: localTrackId, progress: localProgre
     const playbackSample = samplePlayback();
     inlineSample.current = playbackSample;
     latestDisplay.current = display;
-    displayChannel.current?.postMessage({ ...display, scene: { ...display.scene, playbackSample } });
+
   });
 
   useEffect(() => {
     if (!displaySession) return;
     const channel = new BroadcastChannel(`vault-stage-${displaySession}`);
     displayChannel.current = channel;
-    const publish = () => {
+    let previous: StageDisplay | null = null;
+    const publish = (force = false) => {
       const current = latestDisplay.current;
-      channel.postMessage({ ...current, scene: { ...current.scene, playbackSample: samplePlayback() } });
+      const sample = samplePlayback();
+      const dynamic = new Set(["progress", "timelineTime", "playing", "playbackSample"]);
+      const changed = force || !previous || previous.preset !== current.preset || previous.renderQuality !== current.renderQuality || Object.keys(current.scene).some(key => !dynamic.has(key) && (current.scene as unknown as Record<string, unknown>)[key] !== (previous!.scene as unknown as Record<string, unknown>)[key]);
+      channel.postMessage(changed ? { ...current, scene: { ...current.scene, playbackSample: sample } } : { type: "tick", scene: { progress: current.scene.progress, timelineTime: current.scene.timelineTime, playing: current.scene.playing, playbackSample: sample } });
+      previous = current;
     };
-    channel.onmessage = ({ data }) => { if (data === "ready") publish(); };
+    channel.onmessage = ({ data }) => { if (data === "ready") { lastStageAck.current = Date.now(); publish(true); } else if (data?.type === "stage-alive") lastStageAck.current = Date.now(); };
     publish();
     const heartbeat = window.setInterval(() => {
       if (displayWindow.current?.closed) setDisplaySession(null);
-      else publish();
+      else { setStageConnected(Date.now() - lastStageAck.current < 3000); publish(); }
     }, 100);
     return () => {
       window.clearInterval(heartbeat);
@@ -652,34 +720,61 @@ export function LaserShowRenderer({ trackId: localTrackId, progress: localProgre
     const id = crypto.randomUUID();
     const tab = window.open(`/stage-display?session=${id}`, "_blank");
     if (!tab) {
-      setDisplayError("Allow pop-ups for Vault to open the stage display.");
+      setDisplayError("Allow pop-ups for .womp to open the stage display.");
       return;
     }
-    tab.opener = null;
+
     displayWindow.current = tab;
     setDisplayError("");
-    setDisplaySession(id);
+    lastStageAck.current = 0; setStageConnected(false); setDisplaySession(id);
   }
 
-  const livePatterns = (stagePreset === "circular" || stagePreset === "shrine") ? ARENA_PATTERNS : PATTERN_NAMES;
-  const liveShape = (stagePreset !== "circular" && stagePreset !== "shrine") ? patternOverride : shapeTarget !== "both" ? zonePatterns[shapeTarget]
+  const livePatterns = (stagePreset === "circular" || stagePreset === "shrine" || stagePreset === "fingerclub") ? ARENA_PATTERNS : PATTERN_NAMES;
+  const liveShape = (stagePreset !== "circular" && stagePreset !== "shrine" && stagePreset !== "fingerclub") ? patternOverride : shapeTarget !== "both" ? zonePatterns[shapeTarget]
     : zonePatterns.left === null && zonePatterns.floor === null ? patternOverride
     : (zonePatterns.left ?? patternOverride) === (zonePatterns.floor ?? patternOverride) ? zonePatterns.left ?? patternOverride : undefined;
   function changeLaserStyle(pattern: number | null) {
-    if ((stagePreset === "circular" || stagePreset === "shrine") && shapeTarget !== "both") setZonePatterns((current) => ({ ...current, [shapeTarget]: pattern }));
+    if ((stagePreset === "circular" || stagePreset === "shrine" || stagePreset === "fingerclub") && shapeTarget !== "both") setZonePatterns((current) => ({ ...current, [shapeTarget]: pattern }));
     else { setPatternOverride(pattern); setZonePatterns({ left: null, right: null, floor: null }); }
   }
   const liveVisual = screenContent === "vj-pack" && selectedVj ? selectedVj : screenContent;
   function changeVisual(value: string) {
-    const loop = VJ_LOOPS.find((item) => item.src === value);
+    const loop = availableVfx.find((item) => item.src === value);
     setSelectedVj(loop?.src ?? null);
     setScreenContent(loop ? "vj-pack" : value as ScreenContent);
   }
   function stepVisual(direction: number) {
-    const index = VJ_LOOPS.findIndex((loop) => loop.src === liveVisual);
-    changeVisual(VJ_LOOPS[(index < 0 ? (direction > 0 ? 0 : VJ_LOOPS.length - 1) : index + direction + VJ_LOOPS.length) % VJ_LOOPS.length].src);
+    const index = availableVfx.findIndex((loop) => loop.src === liveVisual);
+    changeVisual(availableVfx[(index < 0 ? (direction > 0 ? 0 : availableVfx.length - 1) : index + direction + availableVfx.length) % availableVfx.length].src);
   }
-  const applyStagePreset = (choice: StagePreset) => { if ((choice === "circular" || choice === "shrine") !== ((stagePreset === "circular" || stagePreset === "shrine"))) { setMaster(1); setPatternOverride(null); setZonePatterns({ left: null, right: null, floor: null }); } const stage = STAGE_PRESETS[choice]; setStagePreset(choice); setRigChoice(stage.rig); setScreenChoice(stage.screens); setPreset(stage.camera); };
+  const mappingControls = <fieldset className="desk-show-actions desk-mapping"><legend>PROJECTION MAPPING</legend>
+    <div className="desk-inline"><button className="desk-pad" aria-pressed={mapping>0} onClick={()=>setMapping(mapping>0?0:.55)}>{mapping>0?"Mapping on":"Mapping off"}</button><button className="desk-pad" onClick={()=>{setMapping(.55);setMappingMode(6);setMappingScale(.8);setMappingSpeed(.7);setAmbient(.07);}}>Trip preset</button><button className="desk-pad" aria-pressed={dropPreviewStartedAt!==null} onClick={()=>setDropPreviewStartedAt(dropPreviewStartedAt===null?Date.now():null)}>{dropPreviewStartedAt===null?"Preview drop":"Stop preview"}</button></div>
+    <label className="desk-select">Surface pattern<select aria-label="Projection pattern" value={mappingMode} onChange={event=>setMappingMode(Number(event.target.value))}>{["Ripple contours","Liquid interference","Kaleidoscope","Woven ribbons","Hyperspace spiral","Chromatic cells","Fractal inversion","Prismatic mandala"].map((name,index)=><option key={name} value={index}>{name}</option>)}</select></label>
+    <div className="desk-inline"><DeskFader label="Mapping brightness" value={mapping} onChange={setMapping}/><DeskFader label="Mapping speed" value={mappingSpeed} min={0} max={2} onChange={setMappingSpeed}/><DeskFader label="Mapping scale" value={mappingScale} min={.2} max={3} onChange={setMappingScale}/></div>
+    <small className="desk-hint">Animated projection on venue walls. Finger Club also maps both characters.</small>
+  </fieldset>;
+  const visualControls = <div className="desk-show-actions">
+    <div className="desk-inline"><DeskFader label="VFX speed" value={visualSpeed} min={.25} max={2} onChange={setVisualSpeed}/><DeskFader label="Saturation" value={visualSaturation} max={2} onChange={setVisualSaturation}/></div>
+    <div className="desk-inline"><button className="desk-pad" aria-pressed={visualFreeze} onClick={()=>setVisualFreeze(!visualFreeze)}>Freeze VFX</button><button className="desk-pad" aria-pressed={visualMirror} onClick={()=>setVisualMirror(!visualMirror)}>Mirror VFX</button><button className="desk-pad" aria-pressed={linkScreens} onClick={()=>setLinkScreens(!linkScreens)}>Link auto walls</button></div><label className="desk-select">Auto clip change<select aria-label="Auto clip change bars" value={visualBars} onChange={event=>setVisualBars(Number(event.target.value))}>{[4,8,16].map(bars=><option key={bars} value={bars}>{bars} bars</option>)}</select></label>
+    <label className="desk-select">Studio looks<select aria-label="Studio generative look" value={studioLook} onChange={event=>{setStudioLook(Number(event.target.value));setScreenContent("generative");}}><option value={-1}>Music auto</option>{["Chrome tunnel","Monochrome architecture","Aurora silk","Particle eclipse"].map((name,index)=><option key={name} value={index}>{name}</option>)}</select></label>
+    {mappingControls}
+    <VfxImport onImport={clip=>{setImportedVfx(current=>[clip,...current.filter(item=>item.id!==clip.id)]);setSelectedVj(clip.src);setScreenContent("vj-pack");}}/>
+  </div>;
+  const atmosphereControls = <div className="desk-show-actions">
+    <label className="desk-select">Render quality<select aria-label="Render quality" value={renderQuality} onChange={event=>setRenderQuality(event.target.value as RenderQuality)}><option value="balanced">Balanced / fastest</option><option value="crisp">Crisp / bloom</option><option value="ultra">Ultra / high resolution</option></select></label>
+    <DeskFader label="Exposure" value={exposure} min={.4} max={1.8} onChange={setExposure}/><DeskFader label="Air depth" value={fogDensity} min={.003} max={.04} step={.001} onChange={setFogDensity}/><DeskFader label="Floor bounce" value={floorSpill} onChange={setFloorSpill}/><DeskFader label="Bloom" value={bloom} max={1.2} onChange={setBloom}/>
+    <div className="desk-inline"><button className="desk-pad" onClick={()=>{setExposure(.85);setAmbient(.06);setFogDensity(.016);setFloorSpill(.3);setBloom(.25);}}>Club realism</button><button className="desk-pad" onClick={()=>{setExposure(1.1);setAmbient(.12);setFogDensity(.009);setFloorSpill(.5);setBloom(.5);}}>Arena clarity</button></div>
+    <small className="desk-hint">Bloom appears in Crisp and Ultra. Air depth controls distance haze; Haze controls fixture beams.</small>
+  </div>;
+  const releaseControls = <div className="desk-show-actions">
+    {stagePreset === "fingerclub" && <button className="desk-pad" aria-pressed={eyesOnly} onClick={()=>setEyesOnly(!eyesOnly)}>{eyesOnly?"Eye lasers only":"Full 10-projector rig"}</button>}
+    <label className="desk-select">Laser release<select aria-label="Laser release" value={laserRelease} onChange={event => setLaserRelease(event.target.value as LaserRelease)}><option value="drops">Drops only</option><option value="arrangement">Song arrangement</option><option value="open">Always on / manual</option><option value="off">Lasers off</option></select></label>
+    <div className="desk-inline"><label className="desk-select">Drop hold<select aria-label="Laser drop hold bars" value={dropBars} onChange={event=>setDropBars(Number(event.target.value))}>{[1,2,4,8].map(bars=><option key={bars} value={bars}>{bars} bars</option>)}</select></label><DeskFader label="Drop punch" value={dropPunch} max={1} onChange={setDropPunch}/></div><div className="desk-inline" aria-label="Scanner speed presets">{([[.15,"Slow"],[.35,"Flow"],[.65,"Drive"],[1,"Peak"]] as const).map(([value,label]) => <button key={label} className="desk-pad" aria-pressed={laserSpeed === value} onClick={() => setLaserSpeed(value)}>{label}</button>)}</div>
+    <div className="desk-inline"><DeskFader label="Ambient room" value={ambient} onChange={setAmbient} /><DeskFader label="Rig density" value={fixtureDensity} min={.15} onChange={setFixtureDensity} /></div>
+    <div className="desk-inline"><button className="desk-pad" onClick={() => { setAmbient(.04); setLighting(.45); setHaze(.4); }}>Dark room</button><button className="desk-pad" aria-pressed={dropPreviewStartedAt!==null} onClick={()=>setDropPreviewStartedAt(dropPreviewStartedAt===null?Date.now():null)}>{dropPreviewStartedAt===null?"Preview drop · no song needed":"Stop drop preview"}</button><button className="desk-pad" disabled={external || !arenaDropTimes.some(at => at > progress * duration + .25)} onClick={() => { const at = arenaDropTimes.find(at => at > progress * duration + .25); if (at !== undefined) player.seek(Math.max(0, at - 4)); }}>Preview next drop</button></div>
+    <small className="desk-hint">{dropPreviewStartedAt!==null ? "Silent preview · 4-beat build → 4-bar drop. Music transport stays in place." : laserRelease === "drops" ? arenaDropTimes.length ? "Armed · lasers release on the drop. Builds stay lighting only." : "Waiting for analyzed drops · use Always on for manual operation." : laserRelease === "off" ? "Laser output muted. Hold flash overrides release; blackout always wins." : "Pattern and speed remain under your control."}</small>
+  </div>;
+  const applyStagePreset = (choice: StagePreset) => { if ((choice === "circular" || choice === "shrine") !== ((stagePreset === "circular" || stagePreset === "shrine" || stagePreset === "fingerclub"))) { setMaster(1); setPatternOverride(null); setZonePatterns({ left: null, right: null, floor: null }); } if(choice === "fingerclub"){setAmbient(.08);setFloorSpill(.2);setMapping(.2);setVideoFit("fill");setFogDensity(.014);setLaserColors(["#b487ff","#ff255b"]);setScreenContent("vj-pack");setSelectedVj(STUDIO_CLIPS[0].src);} const stage = STAGE_PRESETS[choice]; setStagePreset(choice); setRigChoice(stage.rig); setScreenChoice(stage.screens); setPreset(stage.camera); };
   return <section className={`${expanded ? "fixed inset-0 z-[100] overflow-y-auto rounded-none" : "overflow-hidden rounded-xl"} border border-white/10 bg-[#020405] shadow-[0_30px_100px_rgba(0,0,0,.5)]`}>
     {!displaySession && <LiveInputControls live={live} />}
     <div className="flex flex-wrap items-center gap-3 border-b border-white/10 bg-[#050809] px-4 py-2">
@@ -695,29 +790,31 @@ export function LaserShowRenderer({ trackId: localTrackId, progress: localProgre
       <button type="button" onClick={() => { setLayer("all"); setBlackout(false); setMaster(1); setPreset("arena"); }} className="min-h-11 rounded-md border border-white/15 px-3 text-sm text-white/85">Full stage</button>
       {displaySession && <button type="button" onClick={() => { displayWindow.current?.close(); displayWindow.current = null; setDisplaySession(null); }} className="min-h-11 rounded-md border border-white/15 px-3 text-sm text-white/85">Return stage here</button>}
       {!displaySession && <button type="button" onClick={() => setExpanded((value) => !value)} className="min-h-11 rounded-md border border-white/15 px-3 text-xs text-white/85">{expanded ? "Exit expanded stage" : "Expand stage"}</button>}
+      {displaySession && <span role="status" className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs ${stageConnected ? "bg-green-400/10 text-green-300" : "bg-amber-400/10 text-amber-200"}`}><i className={`size-1.5 rounded-full ${stageConnected ? "bg-green-300" : "bg-amber-300 animate-pulse"}`} />{stageConnected ? "Stage connected" : "Connecting stage…"}</span>}
       {displayError && <p role="status" className="text-xs text-coral">{displayError}</p>}
     </div>
+    {!displaySession && <div className="flex flex-wrap items-center gap-3 border-b border-white/10 bg-[#181818] px-4 py-3"><button type="button" onClick={() => { setAutomaticShow(true); setPatternOverride(null); setZonePatterns({left:null,right:null,floor:null}); setLayer("all"); setBlackout(false); setMaster(1); }} className="rounded-full bg-[#1db954] px-4 py-2.5 text-xs font-bold text-black">Auto show</button><button type="button" aria-pressed={blackout} onClick={() => setBlackout(value => !value)} className={`rounded-full border px-4 py-2.5 text-xs font-semibold ${blackout ? "border-red-400 bg-red-400/15 text-red-200" : "border-white/25 text-white"}`}>{blackout ? "Restore output" : "Blackout"}</button><label className="flex min-w-40 flex-1 items-center gap-3 text-xs text-white/70">Master<input aria-label="Quick master output" type="range" min={0} max={1} step={.01} value={master} onChange={event => setMaster(Number(event.target.value))} className="min-w-0 flex-1 accent-[#1db954]" /><output className="w-9 tabular-nums">{Math.round(master * 100)}%</output></label><span className="text-xs text-white/45">1. Choose input · 2. Auto show · 3. Open stage</span></div>}
     <div className={`relative ${displaySession ? "hidden" : expanded ? "h-[calc(100dvh-6rem)] min-h-72" : "h-[clamp(430px,62vh,720px)]"} bg-[radial-gradient(circle_at_50%_15%,rgba(23,57,52,.18),transparent_45%),#010203]`}>
-      {displaySession ? <div className="absolute inset-0 grid place-items-center text-sm text-white/75">Stage display is open in a separate tab. Music and live controls stay here.</div> : visible && <StageCanvas {...display} inlineSample={inlineSample} />}
+      {displaySession ? <div className="absolute inset-0 grid place-items-center text-sm text-white/75">Stage display is open in a separate tab. Music and live controls stay here.</div> : visible && !consoleOpen && <StageCanvas {...display} inlineSample={inlineSample} />}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/70 to-transparent" /><div className="absolute bottom-4 left-4 flex items-center gap-2 rounded-lg border border-white/10 bg-black/55 px-3 py-2 backdrop-blur-xl"><ScanLine size={14} className="text-glass" /><div><p className="font-mono text-xs uppercase tracking-[.14em] text-white/75">Cue position</p><p className="font-mono text-xs tabular-nums text-white">{Math.floor(progress * 1000) / 10}%</p></div></div>
     </div>
-    {displaySession && <CompactShowConsole source={<LiveInputControls live={live} />} external={external}
+    {(displaySession || consoleOpen) && <CompactShowConsole preview={<StageCanvas {...display} inlineSample={inlineSample} preview/>} monitorControls={<label className="desk-select">Camera<select aria-label="Monitor camera" value={preset} onChange={event=>setPreset(event.target.value as CameraPreset)}>{["arena","floor","rear-balcony","balcony-left","balcony-right","booth","overhead","stage-wing"].map(value=><option key={value} value={value}>{value.replaceAll("-"," ")}</option>)}</select></label>} connection={displaySession ? stageConnected ? "Stage connected" : "Reconnecting stage…" : "Local stage"} source={<LiveInputControls live={live} />} external={external}
       venue={<label className="desk-select desk-venue">Venue<select aria-label="Venue" value={stagePreset} onChange={(event) => applyStagePreset(event.target.value as StagePreset)}>{(Object.keys(STAGE_PRESETS) as StagePreset[]).map((key) => <option key={key} value={key}>{STAGE_PRESETS[key].label}</option>)}</select></label>}
       title={external ? live.deck?.title||"Waiting for rekordbox" : player.currentTrack?.title ?? "Stage preview"} status={external && !live.track ? `${live.deck?.bpm.toFixed(1) ?? "—"} BPM · Live timing only` : `${tempo} BPM · ${songCueAt(songProgram, progress * duration)?.section ?? "Ready"} · ${automaticShow ? "Song show" : "Manual cues"}`}
       playing={playing} canPlay={!!trackId} onToggle={onToggle} previous={() => void player.previous()} next={() => void player.next()} canPrevious={player.canGoPrevious} canNext={!!player.queue.length}
       blackout={blackout} flash={flashLive} onFlash={holdFlash} onBlackout={() => setBlackout(!blackout)} onFocus={openStageDisplay}
-      onReturn={() => { displayWindow.current?.close(); displayWindow.current = null; setDisplaySession(null); }}
-      onAuto={() => { setAutomaticShow(true); setPatternOverride(null); setZonePatterns({ left: null, right: null, floor: null }); setLaserColors([]); setLightColors([]); setScreenContent("auto"); setSelectedVj(null); setCeilingPattern("Music sync"); setLaserSpeed(1); setLightSpeed(1); setLayer("all"); setBlackout(false); }}
+      onReturn={() => { displayWindow.current?.close(); displayWindow.current = null; setDisplaySession(null); setConsoleOpen(false); }}
+      onAuto={() => { setAutomaticShow(true); setPatternOverride(null); setZonePatterns({ left: null, right: null, floor: null }); setLaserColors([]); setLightColors([]); setScreenContent("auto"); setSelectedVj(null); setStudioLook(-1); setVisualFreeze(false); setVisualSpeed(1); setVisualMirror(false); setVisualSaturation(1); setCeilingPattern("Music sync"); setLaserSpeed(.35); setLaserRelease("drops"); setLightSpeed(1); setLayer("all"); setBlackout(false); }}
       time={external ? live.time : progress * duration} duration={duration} onSeek={player.seek}
       lasers={{ names: livePatterns, selected: liveShape, onPattern: changeLaserStyle, colors: laserColors, onColors: setLaserColors,
-        controls: <><label className="desk-select">Bank<select aria-label="Laser target bank" value={shapeTarget} onChange={(event) => setShapeTarget(event.target.value as LaserTarget)}><option value="both">Top + bottom</option><option value="left">Top rig</option><option value="floor">Floor rig</option></select></label><div className="desk-inline"><DeskFader label="Laser speed" value={laserSpeed} min={.25} max={3} onChange={setLaserSpeed} /><DeskFader label="Beam width" value={beamWidth} min={.5} max={4} onChange={setBeamWidth} /></div>{(stagePreset === "circular" || stagePreset === "shrine") && <label className="desk-select">Fan<select aria-label="Quick laser fan" value={liveShape !== undefined && liveShape !== null && liveShape >= 20 ? liveShape : -1} onChange={(event) => changeLaserStyle(Number(event.target.value) < 0 ? null : Number(event.target.value))}><option value={-1}>Song / pattern bank</option>{ARENA_PATTERNS.slice(20).map((name,index) => <option key={name} value={index+20}>{name}</option>)}</select></label>}</> }}
+        controls: <>{releaseControls}<label className="desk-select">Bank<select aria-label="Laser target bank" value={shapeTarget} onChange={(event) => setShapeTarget(event.target.value as LaserTarget)}><option value="both">Top + bottom</option><option value="left">Top rig</option><option value="floor">Floor rig</option></select></label><div className="desk-inline"><DeskFader label="Laser speed" value={laserSpeed} min={0} max={2} onChange={setLaserSpeed} /><DeskFader label="Beam width" value={beamWidth} min={.5} max={4} onChange={setBeamWidth} /></div>{(stagePreset === "circular" || stagePreset === "shrine" || stagePreset === "fingerclub") && <label className="desk-select">Fan<select aria-label="Quick laser fan" value={liveShape !== undefined && liveShape !== null && liveShape >= 20 ? liveShape : -1} onChange={(event) => changeLaserStyle(Number(event.target.value) < 0 ? null : Number(event.target.value))}><option value={-1}>Song / pattern bank</option>{ARENA_PATTERNS.slice(20).map((name,index) => <option key={name} value={index+20}>{name}</option>)}</select></label>}</> }}
       lights={{ names: CEILING_PATTERNS.slice(1), selected: ceilingPattern === "Music sync" ? null : CEILING_PATTERNS.slice(1).indexOf(ceilingPattern), onPattern: (value) => { setCeilingPattern(value === null ? "Music sync" : CEILING_PATTERNS[value + 1]); setLayer("all"); }, colors: lightColors, onColors: (value) => { setLightColors(value); if (value[0]) setCeilingColor(value[0]); },
         controls: <><label className="desk-select">Ceiling trim<input aria-label="Ceiling strip color" type="color" value={ceilingColor} onChange={(event) => setCeilingColor(event.target.value)} /></label><div className="desk-inline"><DeskFader label="Light speed" value={lightSpeed} min={.1} max={3} onChange={setLightSpeed} /><DeskFader label="Light movement range" value={lightMovement} max={1.5} onChange={setLightMovement} /></div></> }}
-      visuals={VJ_LOOPS} visual={liveVisual} onVisual={changeVisual} fit={videoFit} onFit={setVideoFit}
-      faders={<><DeskFader label="Master" value={master} onChange={setMaster} /><DeskFader label="Lasers" value={intensity} max={1.25} onChange={setIntensity} /><DeskFader label="Lights" value={lighting} onChange={setLighting} /><DeskFader label="Screens" value={ledPower} onChange={setLedPower} /><DeskFader label="Haze" value={haze} onChange={setHaze} /></>}
-      setup={<><label className="desk-select">Stage<select value={stagePreset} onChange={(event) => applyStagePreset(event.target.value as StagePreset)}>{(Object.keys(STAGE_PRESETS) as StagePreset[]).map((key) => <option key={key} value={key}>{STAGE_PRESETS[key].label}</option>)}</select></label><label className="desk-select">Camera<select value={preset} onChange={(event) => setPreset(event.target.value as CameraPreset)}>{["arena", "floor", "balcony-left", "balcony-right", "rear-balcony", "stage-wing", "booth", "overhead"].map((key) => <option key={key}>{key}</option>)}</select></label><label className="desk-select">Layers<select value={layer} onChange={(event) => setLayer(event.target.value as ShowLayer)}>{["all", "lasers", "lights", "screens"].map((key) => <option key={key}>{key}</option>)}</select></label><label className="desk-select">Screens<select value={screenChoice} onChange={(event) => setScreenChoice(event.target.value as ScreenChoice)}>{["auto", "cinema", "totems", "mosaic", "diamonds", "orbit"].map((key) => <option key={key}>{key}</option>)}</select></label><DeskFader label="Visual timing" value={timingTrim} min={-.5} max={.5} onChange={setTimingTrim} /><DeskFader label="Scanner spread" value={spread} onChange={setSpread} /></>}
+      visuals={availableVfx} visualControls={visualControls} visual={liveVisual} onVisual={changeVisual} fit={videoFit} onFit={setVideoFit}
+      faders={<><DeskFader label="Master" value={master} onChange={setMaster} /><DeskFader label="Lasers" value={intensity} max={1.25} onChange={setIntensity} /><DeskFader label="Lights" value={lighting} onChange={setLighting} /><DeskFader label="Screens" value={ledPower} onChange={setLedPower} /><DeskFader label="Haze" value={haze} onChange={setHaze} /><DeskFader label="Ambient" value={ambient} onChange={setAmbient} /></>}
+      setup={<>{atmosphereControls}{trackId && <details className="desk-manual-cues"><summary>Program manual song cues</summary><ArenaCueControls key={trackId} cues={arenaCues} beat={showBeat} onChange={saveArenaCues}/>{cueError && <small role="status">{cueError}</small>}</details>}<label className="desk-select">Stage<select value={stagePreset} onChange={(event) => applyStagePreset(event.target.value as StagePreset)}>{(Object.keys(STAGE_PRESETS) as StagePreset[]).map((key) => <option key={key} value={key}>{STAGE_PRESETS[key].label}</option>)}</select></label><label className="desk-select">Camera<select value={preset} onChange={(event) => setPreset(event.target.value as CameraPreset)}>{["arena", "floor", "balcony-left", "balcony-right", "rear-balcony", "stage-wing", "booth", "overhead"].map((key) => <option key={key}>{key}</option>)}</select></label><label className="desk-select">Layers<select value={layer} onChange={(event) => setLayer(event.target.value as ShowLayer)}>{["all", "lasers", "lights", "screens"].map((key) => <option key={key}>{key}</option>)}</select></label><label className="desk-select">Screens<select value={screenChoice} onChange={(event) => setScreenChoice(event.target.value as ScreenChoice)}>{["auto", "cinema", "totems", "mosaic", "diamonds", "orbit"].map((key) => <option key={key}>{key}</option>)}</select></label><DeskFader label="Visual timing" value={timingTrim} min={-.5} max={.5} onChange={setTimingTrim} /><DeskFader label="Scanner spread" value={spread} onChange={setSpread} /></>}
     />}
-    <aside id="vault-live-console" aria-label="Live show console" hidden={!!displaySession || !consoleOpen}
+    <aside id="vault-live-console" aria-label="Live show console" hidden={true}
       onKeyDown={(event) => { if (event.key === "Escape" && !displaySession) { setConsoleOpen(false); consoleToggle.current?.focus(); } }}
       className={displaySession ? "bg-[#07090a]" : "fixed bottom-[5.5rem] right-3 z-[110] max-h-[min(72dvh,48rem)] w-[min(35rem,calc(100vw-1.5rem))] overflow-y-auto rounded-xl border border-white/15 bg-[#07090a] shadow-2xl"}>
       <div className="sticky top-0 z-10 space-y-3 border-b border-white/10 bg-[#0c1014] p-3">
@@ -736,13 +833,14 @@ export function LaserShowRenderer({ trackId: localTrackId, progress: localProgre
         </label>
       </div>
       <div className="flex flex-wrap items-center gap-2 border-b border-white/10 bg-[#101416] px-3 py-2">
-        <button type="button" onClick={() => { setAutomaticShow(true); setPatternOverride(null); setZonePatterns({ left: null, right: null, floor: null }); setLaserColors([]); setLightColors([]); setScreenContent("auto"); setSelectedVj(null); setCeilingPattern("Music sync"); setLaserSpeed(1); }}
+        <button type="button" onClick={() => { setAutomaticShow(true); setPatternOverride(null); setZonePatterns({ left: null, right: null, floor: null }); setLaserColors([]); setLightColors([]); setScreenContent("auto"); setSelectedVj(null); setStudioLook(-1); setVisualFreeze(false); setVisualSpeed(1); setVisualMirror(false); setVisualSaturation(1); setCeilingPattern("Music sync"); setLaserSpeed(.35); setLaserRelease("drops"); }}
           className="min-h-11 rounded-md border border-emerald-300/40 bg-emerald-300/10 px-3 text-sm text-emerald-200">Run song show</button>
         <p className="text-xs text-white/70" role="status">{songProgram.length ? `${songCueAt(songProgram, progress * duration)?.section ?? "Ready"} · ${songProgram.length} cues · ${songCueAt(songProgram, progress * duration)?.lasers === "none" ? "Lighting only" : songCueAt(songProgram, progress * duration)?.lasers ?? "all"}` : trackId ? "Analyzing song…" : "Choose a track for its automatic show"}</p>
       </div>
+      <div className="p-3">{releaseControls}<details className="mt-3"><summary>Venue realism</summary>{atmosphereControls}</details><details className="mt-3"><summary>VFX studio & imports</summary>{visualControls}</details></div>
       <LiveLaserControls palette={laserColors} onPalette={setLaserColors} patterns={livePatterns} pattern={liveShape}
-        onPattern={changeLaserStyle} target={shapeTarget} onTarget={setShapeTarget} bankControls={(stagePreset === "circular" || stagePreset === "shrine")} />
-      {(stagePreset === "circular" || stagePreset === "shrine") && (consoleOpen || displaySession) && visible && <ShowDesk active={activeLook} onLook={takeLook}
+        onPattern={changeLaserStyle} target={shapeTarget} onTarget={setShapeTarget} bankControls={(stagePreset === "circular" || stagePreset === "shrine" || stagePreset === "fingerclub")} />
+      {(stagePreset === "circular" || stagePreset === "shrine" || stagePreset === "fingerclub") && (consoleOpen || displaySession) && visible && <ShowDesk active={activeLook} onLook={takeLook}
         flash={flashLive} onFlash={holdFlash} blackout={blackout}
         master={{ label: "Master", value: master, onChange: setMaster }}
         faders={[
@@ -754,12 +852,12 @@ export function LaserShowRenderer({ trackId: localTrackId, progress: localProgre
         <legend className="px-1 text-sm font-bold">Live laser and VFX controls</legend>
         <div className="grid gap-2">
           <label className="grid gap-1 text-sm text-white/80"><span>Laser movement speed <span className="ml-1 tabular-nums text-emerald-300">{laserSpeed.toFixed(2)}×</span></span>
-            <input aria-label="Laser movement speed" type="range" min=".25" max="3" step=".05" value={laserSpeed} onChange={(event) => setLaserSpeed(Number(event.target.value))} className="h-9 accent-emerald-300" />
+            <input aria-label="Laser movement speed" type="range" min="0" max="2" step=".05" value={laserSpeed} onChange={(event) => setLaserSpeed(Number(event.target.value))} className="h-9 accent-emerald-300" />
           </label>
           <div className="flex gap-2" aria-label="Laser speed presets">
-            {[.5, 1, 2].map((speed) => <button key={speed} type="button" aria-pressed={laserSpeed === speed} onClick={() => setLaserSpeed(speed)} className="min-h-11 flex-1 rounded border border-white/20 text-sm aria-pressed:bg-emerald-300/20">{speed}×</button>)}
+            {[.15, .35, .65, 1].map((speed) => <button key={speed} type="button" aria-pressed={laserSpeed === speed} onClick={() => setLaserSpeed(speed)} className="min-h-11 flex-1 rounded border border-white/20 text-sm aria-pressed:bg-emerald-300/20">{speed}×</button>)}
           </div>
-          {(stagePreset !== "circular" && stagePreset !== "shrine") && <label className="grid gap-1 text-sm text-white/80">Beam path
+          {(stagePreset !== "circular" && stagePreset !== "shrine" && stagePreset !== "fingerclub") && <label className="grid gap-1 text-sm text-white/80">Beam path
             <select value={beamShape} onChange={(event) => setBeamShape(event.target.value as BeamShape)} className="h-11 rounded border border-white/20 bg-black px-2">
               {["straight", "sine", "helix", "zigzag"].map((shape) => <option key={shape}>{shape}</option>)}
             </select>
@@ -807,15 +905,15 @@ export function LaserShowRenderer({ trackId: localTrackId, progress: localProgre
         <label className="grid gap-1">Camera<select value={preset} onChange={(event) => setPreset(event.target.value as CameraPreset)} className="h-11 rounded border border-white/15 bg-black px-2"><option value="arena">Audience</option><option value="booth">DJ booth</option><option value="overhead">Overhead</option><option value="floor">Floor center</option><option value="balcony-left">Left balcony</option><option value="balcony-right">Right balcony</option><option value="rear-balcony">Rear balcony</option><option value="stage-wing">Stage wing</option></select></label>
         <label className="grid gap-1">Layers<select value={layer} onChange={(event) => setLayer(event.target.value as ShowLayer)} className="h-11 rounded border border-white/15 bg-black px-2"><option value="all">Full stage</option><option value="lasers">Lasers only</option><option value="lights">Lights only</option><option value="screens">Screens only</option></select></label>
         <label className="col-span-2 grid gap-1">Visual timing · {Math.round(timingTrim * 1000)} ms
-          <input aria-label="Visual timing" type="range" min="-.3" max=".3" step=".01" value={timingTrim} disabled={(stagePreset !== "circular" && stagePreset !== "shrine")} onChange={(event) => setTimingTrim(Number(event.target.value))} className="h-7 accent-[var(--coral)]" />
+          <input aria-label="Visual timing" type="range" min="-.3" max=".3" step=".01" value={timingTrim} disabled={(stagePreset !== "circular" && stagePreset !== "shrine" && stagePreset !== "fingerclub")} onChange={(event) => setTimingTrim(Number(event.target.value))} className="h-7 accent-[var(--coral)]" />
           <span className="text-white/75">Negative leads the audio. Positive delays visuals.</span>
         </label>
         <button type="button" onClick={() => setTimingTrim(0)} className="min-h-11 rounded border border-white/15 px-2">Reset timing</button>
-        <button type="button" disabled={(stagePreset !== "circular" && stagePreset !== "shrine") || !arenaDropTimes.some((time) => time > progress * duration + .25)} onClick={() => { const next = arenaDropTimes.find((time) => time > progress * duration + .25); if (next !== undefined) player.seek(Math.max(0, next - .75)); }} className="min-h-11 rounded border border-white/15 px-2 disabled:opacity-40">Preview next drop</button>
+        <button type="button" disabled={(stagePreset !== "circular" && stagePreset !== "shrine" && stagePreset !== "fingerclub") || !arenaDropTimes.some((time) => time > progress * duration + .25)} onClick={() => { const next = arenaDropTimes.find((time) => time > progress * duration + .25); if (next !== undefined) player.seek(Math.max(0, next - .75)); }} className="min-h-11 rounded border border-white/15 px-2 disabled:opacity-40">Preview next drop</button>
       </div>
-    <div className="border-t border-white/[.08] bg-[#07090a] px-4 py-3"><div className="mb-3 flex flex-wrap items-center justify-between gap-3"><div><p className="font-mono text-xs uppercase tracking-[.14em] text-white/75">Independent laser zones</p><p className="mt-1 text-xs text-white/75">Choose independent formations or let the music drive each bank.</p></div><span className="font-mono text-xs uppercase tracking-wide text-glass">{(stagePreset === "circular" || stagePreset === "shrine") ? 42 : 40} laser fixtures</span></div><div className="grid gap-3 md:grid-cols-3">{(((stagePreset === "circular" || stagePreset === "shrine") ? ["left", "floor"] : ["left", "right", "floor"]) as LaserZone[]).map((zone) => <label key={zone} className="grid gap-1.5"><span className="text-xs capitalize text-white/75">{(stagePreset === "circular" || stagePreset === "shrine") ? (zone === "left" ? "Top" : "Bottom") : zone} lasers</span><select aria-label={(stagePreset === "circular" || stagePreset === "shrine") ? (zone === "left" ? "Top lasers" : "Bottom lasers") : `${zone} laser pattern`} value={zonePatterns[zone] ?? -1} onChange={(event) => setZonePatterns((current) => ({ ...current, [zone]: Number(event.target.value) < 0 ? null : Number(event.target.value) }))} className="h-11 rounded-md border border-white/10 bg-black/40 px-3 text-xs text-white outline-none focus:border-glass/50"><option value={-1}>Follow master cue</option>{((stagePreset === "circular" || stagePreset === "shrine") ? ARENA_PATTERNS : PATTERN_NAMES).map((name, index) => <option key={name} value={index}>{name}</option>)}</select></label>)}</div></div>
-    <div className="grid gap-4 border-t border-white/[.08] bg-[#070a0b] p-4 sm:grid-cols-2 xl:grid-cols-5">{(stagePreset !== "circular" && stagePreset !== "shrine") && <><label className="grid grid-cols-[auto_1fr_auto] items-center gap-3 text-xs text-white/75"><Gauge size={14} className="text-coral" /><span>Laser power</span><span className="font-mono tabular-nums text-white/75">{Math.round(intensity * 100)}%</span><input className="col-span-3 accent-[var(--coral)]" type="range" min=".2" max="1.25" step=".01" value={intensity} onChange={(event) => setIntensity(Number(event.target.value))} /></label><label className="grid grid-cols-[auto_1fr_auto] items-center gap-3 text-xs text-white/75"><Lightbulb size={14} className="text-sky-300" /><span>Stage lighting</span><span className="font-mono tabular-nums text-white/75">{Math.round(lighting * 100)}%</span><input className="col-span-3 accent-sky-400" type="range" min=".1" max="1.25" step=".01" value={lighting} onChange={(event) => setLighting(Number(event.target.value))} /></label><label className="grid grid-cols-[auto_1fr_auto] items-center gap-3 text-xs text-white/75"><Monitor size={14} className="text-violet-300" /><span>LED walls</span><span className="font-mono tabular-nums text-white/75">{Math.round(ledPower * 100)}%</span><input className="col-span-3 accent-violet-400" type="range" min="0" max="1.2" step=".01" value={ledPower} onChange={(event) => setLedPower(Number(event.target.value))} /></label></>}<label className="grid grid-cols-[auto_1fr_auto] items-center gap-3 text-xs text-white/75"><Camera size={14} className="text-glass" /><span>Scanner spread</span><span className="font-mono tabular-nums text-white/75">{Math.round(spread * 100)}%</span><input className="col-span-3 accent-[var(--glass)]" type="range" min=".1" max="1" step=".01" value={spread} onChange={(event) => setSpread(Number(event.target.value))} /></label><label className="grid grid-cols-[auto_1fr_auto] items-center gap-3 text-xs text-white/75"><SparklesIcon size={14} className="text-fuchsia-300" /><span>Atmosphere</span><span className="font-mono tabular-nums text-white/75">{Math.round(haze * 100)}%</span><input className="col-span-3 accent-fuchsia-400" type="range" min=".05" max="1" step=".01" value={haze} onChange={(event) => setHaze(Number(event.target.value))} /></label></div>
-    {(stagePreset === "circular" || stagePreset === "shrine") && <fieldset className="border-t border-white/10 bg-[#07090a] px-4 py-3">
+    <div className="border-t border-white/[.08] bg-[#07090a] px-4 py-3"><div className="mb-3 flex flex-wrap items-center justify-between gap-3"><div><p className="font-mono text-xs uppercase tracking-[.14em] text-white/75">Independent laser zones</p><p className="mt-1 text-xs text-white/75">Choose independent formations or let the music drive each bank.</p></div><span className="font-mono text-xs uppercase tracking-wide text-glass">{(stagePreset === "circular" || stagePreset === "shrine" || stagePreset === "fingerclub") ? 42 : 40} laser fixtures</span></div><div className="grid gap-3 md:grid-cols-3">{(((stagePreset === "circular" || stagePreset === "shrine" || stagePreset === "fingerclub") ? ["left", "floor"] : ["left", "right", "floor"]) as LaserZone[]).map((zone) => <label key={zone} className="grid gap-1.5"><span className="text-xs capitalize text-white/75">{(stagePreset === "circular" || stagePreset === "shrine" || stagePreset === "fingerclub") ? (zone === "left" ? "Top" : "Bottom") : zone} lasers</span><select aria-label={(stagePreset === "circular" || stagePreset === "shrine" || stagePreset === "fingerclub") ? (zone === "left" ? "Top lasers" : "Bottom lasers") : `${zone} laser pattern`} value={zonePatterns[zone] ?? -1} onChange={(event) => setZonePatterns((current) => ({ ...current, [zone]: Number(event.target.value) < 0 ? null : Number(event.target.value) }))} className="h-11 rounded-md border border-white/10 bg-black/40 px-3 text-xs text-white outline-none focus:border-glass/50"><option value={-1}>Follow master cue</option>{((stagePreset === "circular" || stagePreset === "shrine" || stagePreset === "fingerclub") ? ARENA_PATTERNS : PATTERN_NAMES).map((name, index) => <option key={name} value={index}>{name}</option>)}</select></label>)}</div></div>
+    <div className="grid gap-4 border-t border-white/[.08] bg-[#070a0b] p-4 sm:grid-cols-2 xl:grid-cols-5">{(stagePreset !== "circular" && stagePreset !== "shrine" && stagePreset !== "fingerclub") && <><label className="grid grid-cols-[auto_1fr_auto] items-center gap-3 text-xs text-white/75"><Gauge size={14} className="text-coral" /><span>Laser power</span><span className="font-mono tabular-nums text-white/75">{Math.round(intensity * 100)}%</span><input className="col-span-3 accent-[var(--coral)]" type="range" min=".2" max="1.25" step=".01" value={intensity} onChange={(event) => setIntensity(Number(event.target.value))} /></label><label className="grid grid-cols-[auto_1fr_auto] items-center gap-3 text-xs text-white/75"><Lightbulb size={14} className="text-sky-300" /><span>Stage lighting</span><span className="font-mono tabular-nums text-white/75">{Math.round(lighting * 100)}%</span><input className="col-span-3 accent-sky-400" type="range" min=".1" max="1.25" step=".01" value={lighting} onChange={(event) => setLighting(Number(event.target.value))} /></label><label className="grid grid-cols-[auto_1fr_auto] items-center gap-3 text-xs text-white/75"><Monitor size={14} className="text-violet-300" /><span>LED walls</span><span className="font-mono tabular-nums text-white/75">{Math.round(ledPower * 100)}%</span><input className="col-span-3 accent-violet-400" type="range" min="0" max="1.2" step=".01" value={ledPower} onChange={(event) => setLedPower(Number(event.target.value))} /></label></>}<label className="grid grid-cols-[auto_1fr_auto] items-center gap-3 text-xs text-white/75"><Camera size={14} className="text-glass" /><span>Scanner spread</span><span className="font-mono tabular-nums text-white/75">{Math.round(spread * 100)}%</span><input className="col-span-3 accent-[var(--glass)]" type="range" min=".1" max="1" step=".01" value={spread} onChange={(event) => setSpread(Number(event.target.value))} /></label><label className="grid grid-cols-[auto_1fr_auto] items-center gap-3 text-xs text-white/75"><SparklesIcon size={14} className="text-fuchsia-300" /><span>Atmosphere</span><span className="font-mono tabular-nums text-white/75">{Math.round(haze * 100)}%</span><input className="col-span-3 accent-fuchsia-400" type="range" min=".05" max="1" step=".01" value={haze} onChange={(event) => setHaze(Number(event.target.value))} /></label></div>
+    {(stagePreset === "circular" || stagePreset === "shrine" || stagePreset === "fingerclub") && <fieldset className="border-t border-white/10 bg-[#07090a] px-4 py-3">
       <legend className="px-1 text-xs font-semibold text-white/85">Ceiling squares</legend>
       <div className="flex flex-wrap items-end gap-4">
         <label className="grid gap-1 text-xs text-white/70">Ceiling color
@@ -828,20 +926,20 @@ export function LaserShowRenderer({ trackId: localTrackId, progress: localProgre
         </label>
       </div>
     </fieldset>}
-    {(stagePreset === "circular" || stagePreset === "shrine") && trackId && <ArenaCueControls key={trackId} cues={arenaCues} beat={showBeat} onChange={saveArenaCues} />}
-    {(stagePreset === "circular" || stagePreset === "shrine") && cueError && <p className="px-4 py-2 text-xs text-coral" role="status">{cueError}</p>}
+    {(stagePreset === "circular" || stagePreset === "shrine" || stagePreset === "fingerclub") && trackId && <ArenaCueControls key={trackId} cues={arenaCues} beat={showBeat} onChange={saveArenaCues} />}
+    {(stagePreset === "circular" || stagePreset === "shrine" || stagePreset === "fingerclub") && cueError && <p className="px-4 py-2 text-xs text-coral" role="status">{cueError}</p>}
     <details className="border-t border-white/10">
       <summary className="min-h-11 cursor-pointer px-4 py-3 text-sm text-white/85">Stage, lighting and visuals</summary>
       <div className="grid grid-cols-2 gap-3 p-3 text-xs text-white/80">
-        {(stagePreset !== "circular" && stagePreset !== "shrine") && <label className="grid gap-1">Fixture layout<select className="h-11 rounded border border-white/15 bg-black px-2" value={rigChoice} onChange={(event) => setRigChoice(event.target.value as RigChoice)}>{["auto", "truss", "ring", "wings", "floor"].map((item) => <option key={item}>{item}</option>)}</select></label>}
+        {(stagePreset !== "circular" && stagePreset !== "shrine" && stagePreset !== "fingerclub") && <label className="grid gap-1">Fixture layout<select className="h-11 rounded border border-white/15 bg-black px-2" value={rigChoice} onChange={(event) => setRigChoice(event.target.value as RigChoice)}>{["auto", "truss", "ring", "wings", "floor"].map((item) => <option key={item}>{item}</option>)}</select></label>}
         <label className="grid gap-1">Screen layout<select className="h-11 rounded border border-white/15 bg-black px-2" value={screenChoice} onChange={(event) => setScreenChoice(event.target.value as ScreenChoice)}>{["auto", "cinema", "totems", "mosaic", "diamonds", "orbit"].map((item) => <option key={item}>{item}</option>)}</select></label>
       </div>
     <div className="grid gap-4 border-t border-white/[.08] bg-[#050708] px-4 py-3 lg:grid-cols-[1.3fr_1fr]"><label className="grid grid-cols-[1fr_auto] items-center gap-x-3 text-xs text-white/75"><span>Beam width</span><span className="font-mono tabular-nums text-white/75">{Math.round(beamWidth * 100)}%</span><input aria-label="Laser beam width" className="col-span-2 accent-[var(--glass)]" type="range" min=".5" max="4" step=".05" value={beamWidth} onChange={(event) => setBeamWidth(Number(event.target.value))} /></label></div>
 
-    {(stagePreset !== "circular" && stagePreset !== "shrine") && <div className="grid gap-4 border-t border-white/[.08] bg-[#050708] px-4 py-3 xl:grid-cols-[1.2fr_1fr_1fr]"><div><p className="mb-2 font-mono text-xs uppercase tracking-[.14em] text-white/75">Dimensional floor</p><div className="flex flex-wrap gap-1.5">{(["grid", "rings", "chevrons", "circuit"] as FloorPattern[]).map((choice) => <button key={choice} onClick={() => setFloorPattern(choice)} aria-pressed={floorPattern === choice} className={`h-8 rounded-md border px-3 font-mono text-xs uppercase tracking-wide ${floorPattern === choice ? "border-coral/35 bg-coral/10 text-coral" : "border-white/10 text-white/75 hover:text-white"}`}>{choice}</button>)}</div></div><label className="grid grid-cols-[1fr_auto] items-center gap-x-3 text-xs text-white/75"><span>Floor glow</span><span className="font-mono tabular-nums text-white/75">{Math.round(floorPower * 100)}%</span><input aria-label="Floor glow" className="col-span-2 accent-coral" type="range" min="0" max="1.4" step=".01" value={floorPower} onChange={(event) => setFloorPower(Number(event.target.value))} /></label><label className="grid grid-cols-[1fr_auto] items-center gap-x-3 text-xs text-white/75"><span>Floor depth</span><span className="font-mono tabular-nums text-white/75">{Math.round(floorDepth * 100)}%</span><input aria-label="Floor depth" className="col-span-2 accent-[var(--glass)]" type="range" min="0" max="1.5" step=".01" value={floorDepth} onChange={(event) => setFloorDepth(Number(event.target.value))} /></label></div>}
+    {(stagePreset !== "circular" && stagePreset !== "shrine" && stagePreset !== "fingerclub") && <div className="grid gap-4 border-t border-white/[.08] bg-[#050708] px-4 py-3 xl:grid-cols-[1.2fr_1fr_1fr]"><div><p className="mb-2 font-mono text-xs uppercase tracking-[.14em] text-white/75">Dimensional floor</p><div className="flex flex-wrap gap-1.5">{(["grid", "rings", "chevrons", "circuit"] as FloorPattern[]).map((choice) => <button key={choice} onClick={() => setFloorPattern(choice)} aria-pressed={floorPattern === choice} className={`h-8 rounded-md border px-3 font-mono text-xs uppercase tracking-wide ${floorPattern === choice ? "border-coral/35 bg-coral/10 text-coral" : "border-white/10 text-white/75 hover:text-white"}`}>{choice}</button>)}</div></div><label className="grid grid-cols-[1fr_auto] items-center gap-x-3 text-xs text-white/75"><span>Floor glow</span><span className="font-mono tabular-nums text-white/75">{Math.round(floorPower * 100)}%</span><input aria-label="Floor glow" className="col-span-2 accent-coral" type="range" min="0" max="1.4" step=".01" value={floorPower} onChange={(event) => setFloorPower(Number(event.target.value))} /></label><label className="grid grid-cols-[1fr_auto] items-center gap-x-3 text-xs text-white/75"><span>Floor depth</span><span className="font-mono tabular-nums text-white/75">{Math.round(floorDepth * 100)}%</span><input aria-label="Floor depth" className="col-span-2 accent-[var(--glass)]" type="range" min="0" max="1.5" step=".01" value={floorDepth} onChange={(event) => setFloorDepth(Number(event.target.value))} /></label></div>}
     <div className="grid gap-4 border-t border-white/[.08] bg-[#07090a] px-4 py-3 md:grid-cols-2"><div><p className="mb-2 font-mono text-xs uppercase tracking-[.14em] text-white/75">Image quality</p><div className="flex gap-1.5">{(["balanced", "crisp", "ultra"] as RenderQuality[]).map((choice) => <button key={choice} onClick={() => setRenderQuality(choice)} aria-pressed={renderQuality === choice} className={`h-8 rounded-md border px-3 font-mono text-xs uppercase tracking-wide ${renderQuality === choice ? "border-violet-300/35 bg-violet-300/10 text-violet-200" : "border-white/10 text-white/75 hover:text-white"}`}>{choice}</button>)}</div></div><label className="grid grid-cols-[1fr_auto] items-center gap-x-3 text-xs text-white/75"><span>Moving-light range</span><span className="font-mono tabular-nums text-white/75">{Math.round(lightMovement * 100)}%</span><input aria-label="Moving light range" className="col-span-2 accent-sky-400" type="range" min="0" max="1.5" step=".01" value={lightMovement} onChange={(event) => setLightMovement(Number(event.target.value))} /></label></div>
 
-    <div className="grid gap-4 border-t border-white/[.08] bg-[#050708] px-4 py-3 lg:grid-cols-[1.35fr_1.25fr_.8fr]"><div><p className="mb-2 font-mono text-xs uppercase tracking-[.14em] text-white/75">Stage design</p><div className="flex flex-wrap gap-1.5">{(Object.keys(STAGE_PRESETS) as StagePreset[]).map((choice) => <button key={choice} onClick={() => applyStagePreset(choice)} aria-pressed={stagePreset === choice} className={`min-h-10 rounded-md border px-3 text-xs transition ${stagePreset === choice ? "border-glass/30 bg-glass/10 text-glass" : "border-white/10 text-white/75 hover:border-white/20 hover:text-white"}`}>{STAGE_PRESETS[choice].label}</button>)}</div></div>{(stagePreset !== "circular" && stagePreset !== "shrine") && <div><p className="mb-2 font-mono text-xs uppercase tracking-[.14em] text-white/75">Rhythm switching</p><div className="flex flex-wrap gap-1.5">{(["auto", "banks", "chase", "strobe", "open"] as RhythmStyle[]).map((choice) => <button key={choice} onClick={() => setRhythmStyle(choice)} aria-pressed={rhythmStyle === choice} className={`h-8 rounded-md border px-3 font-mono text-xs uppercase tracking-wide transition ${rhythmStyle === choice ? "border-coral/35 bg-coral/10 text-coral" : "border-white/10 text-white/75 hover:text-white"}`}>{choice}</button>)}</div></div>}<label className="grid grid-cols-[1fr_auto] items-center gap-x-3 text-xs text-white/75"><span>Laser motion</span><span className="font-mono tabular-nums text-white/75">{Math.round(motionAmount * 100)}%</span><input className="col-span-2 accent-[var(--glass)]" type="range" min=".45" max="1.65" step=".01" value={motionAmount} onChange={(event) => setMotionAmount(Number(event.target.value))} /></label></div>
+    <div className="grid gap-4 border-t border-white/[.08] bg-[#050708] px-4 py-3 lg:grid-cols-[1.35fr_1.25fr_.8fr]"><div><p className="mb-2 font-mono text-xs uppercase tracking-[.14em] text-white/75">Stage design</p><div className="flex flex-wrap gap-1.5">{(Object.keys(STAGE_PRESETS) as StagePreset[]).map((choice) => <button key={choice} onClick={() => applyStagePreset(choice)} aria-pressed={stagePreset === choice} className={`min-h-10 rounded-md border px-3 text-xs transition ${stagePreset === choice ? "border-glass/30 bg-glass/10 text-glass" : "border-white/10 text-white/75 hover:border-white/20 hover:text-white"}`}>{STAGE_PRESETS[choice].label}</button>)}</div></div>{(stagePreset !== "circular" && stagePreset !== "shrine" && stagePreset !== "fingerclub") && <div><p className="mb-2 font-mono text-xs uppercase tracking-[.14em] text-white/75">Rhythm switching</p><div className="flex flex-wrap gap-1.5">{(["auto", "banks", "chase", "strobe", "open"] as RhythmStyle[]).map((choice) => <button key={choice} onClick={() => setRhythmStyle(choice)} aria-pressed={rhythmStyle === choice} className={`h-8 rounded-md border px-3 font-mono text-xs uppercase tracking-wide transition ${rhythmStyle === choice ? "border-coral/35 bg-coral/10 text-coral" : "border-white/10 text-white/75 hover:text-white"}`}>{choice}</button>)}</div></div>}<label className="grid grid-cols-[1fr_auto] items-center gap-x-3 text-xs text-white/75"><span>Laser motion</span><span className="font-mono tabular-nums text-white/75">{Math.round(motionAmount * 100)}%</span><input className="col-span-2 accent-[var(--glass)]" type="range" min=".45" max="1.65" step=".01" value={motionAmount} onChange={(event) => setMotionAmount(Number(event.target.value))} /></label></div>
     <div className="grid gap-4 border-t border-white/[.08] bg-[#07090a] px-4 py-3 md:grid-cols-[1.2fr_1fr]"><label className="grid grid-cols-[1fr_auto] items-center gap-x-3 text-xs text-white/75"><span>Active fixtures</span><span className="font-mono tabular-nums text-white/75">{Math.round(fixtureDensity * 100)}%</span><input className="col-span-2 accent-coral" type="range" min=".2" max="1" step=".05" value={fixtureDensity} onChange={(event) => setFixtureDensity(Number(event.target.value))} /></label></div>
     <div className="flex flex-wrap items-center gap-3 border-t border-white/[.08] bg-[#07090a] px-4 py-3"><div className="mr-2"><p className="text-xs font-medium text-white/75">Light colors</p><p className="mt-0.5 font-mono text-xs uppercase tracking-wide text-white/75">Independent wash + stage palette</p></div><button onClick={() => setLightColors([])} aria-pressed={!lightColors.length} className={`h-8 rounded-md border px-3 font-mono text-xs uppercase tracking-wide transition ${!lightColors.length ? "border-white/25 bg-white/10 text-white" : "border-white/10 text-white/75 hover:text-white"}`}>Auto</button><div className="flex flex-wrap gap-2" aria-label="Stage light color selection">{LASER_COLOR_OPTIONS.map((color) => { const selected = lightColors.includes(color); return <button key={color} onClick={() => setLightColors((current) => current.includes(color) ? current.filter((item) => item !== color) : [...current, color])} aria-label={`${selected ? "Remove" : "Add"} ${color} stage light color`} aria-pressed={selected} className={`grid h-8 w-8 place-items-center rounded-full border transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${selected ? "scale-110 border-white shadow-[0_0_16px_var(--swatch)]" : "border-white/15 opacity-55 hover:scale-105 hover:opacity-100"}`} style={{ "--swatch": color } as CSSProperties}><span className="h-4 w-4 rounded-full" style={{ backgroundColor: color, boxShadow: `0 0 10px ${color}` }} /></button>; })}</div><span className="ml-auto font-mono text-xs uppercase tracking-wide text-white/75">{lightColors.length ? `${lightColors.length} color${lightColors.length === 1 ? "" : "s"} active` : "Audio palette"}</span></div>
 

@@ -119,7 +119,7 @@ export function LocalLibraryWorkspace() {
         <header className="mt-8 border-b border-border pb-7">
           <div className="flex items-start gap-4">
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-coral text-background"><Usb size={21} /></span>
-            <div><p className="font-mono text-xs uppercase tracking-[.2em] text-glass">USB source manager</p><h1 className="mt-1 font-display text-4xl font-bold tracking-tight">Rekordbox USB library</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">View the tracks, cues, beatgrids, keys, and playlists already exported to your USB. Vault reads the drive without changing it.</p></div>
+            <div><p className="font-mono text-xs uppercase tracking-[.2em] text-glass">USB source manager</p><h1 className="mt-1 font-display text-4xl font-bold tracking-tight">Rekordbox USB library</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">View the tracks, cues, beatgrids, keys, and playlists already exported to your USB. .womp reads the drive without changing it.</p></div>
           </div>
         </header>
 

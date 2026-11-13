@@ -26,7 +26,7 @@ export function programSong(bands: Bands, duration: number, bpm: number, offset:
   const quiet = sorted[Math.floor(sorted.length * .23)] ?? .2;
   const loud = sorted[Math.floor(sorted.length * .7)] ?? .7;
   const seed = Array.from(identity).reduce((value, letter) => (value * 31 + letter.charCodeAt(0)) >>> 0, 7);
-  const pairs = [[12, 13], [1, 3], [16, 7], [18, 19], [8, 9], [14, 15]];
+  const pairs = [[12, 13], [29, 32], [30, 31], [33, 34], [8, 9], [14, 15]];
   const cues: SongCue[] = [];
   let phase = 0;
   for (let i = 0; i < boundaries.length; i++) {
@@ -39,14 +39,15 @@ export function programSong(bands: Bands, duration: number, bpm: number, offset:
     const recentDrop = dropAt !== undefined;
     const relative = Math.max(0,Math.min(1,(levels[i]-quiet)/Math.max(.06,loud-quiet)));
     const buildup = nextDrop === undefined ? 0 : 1-(nextDrop-time)/(bar*2);
-    const section = recentDrop ? "Drop" : levels[i] < quiet + .015 && bass < .48 ? "Quiet"
-      : nextDrop !== undefined || levels[i] - prior > .065 ? "Build" : "Groove";
+    const section = recentDrop ? "Drop" : nextDrop !== undefined ? "Build"
+      : levels[i] < quiet + .015 && bass < .48 ? "Quiet"
+      : levels[i] - prior > .065 ? "Build" : "Groove";
     const choice = (seed + i + Math.floor(bass * 11) + Math.floor(mean(bands.high, time, end) * 7)) % pairs.length;
     const [top, bottom] = section === "Quiet" ? [5, 11] : section === "Build" ? [10, 4] : pairs[choice];
     const dropAge = dropAt === undefined ? Infinity : (time-dropAt)/beat;
-    const rate = section === "Quiet" ? .12+relative*.2 : section === "Build" ? .45+buildup*1.5
-      : section === "Drop" ? (dropAge<1 ? 3.6 : dropAge<4 ? 2.4+relative : 1.5+relative*1.4)
-      : .5+relative*.9+Math.min(.25,bass*.25);
+    const rate = section === "Quiet" ? .12+relative*.2 : section === "Build" ? .22+buildup*.55
+      : section === "Drop" ? (dropAge<1 ? 1.8 : dropAge<4 ? 1.1+relative*.4 : .6+relative*.65)
+      : .25+relative*.35+Math.min(.12,bass*.12);
     const gate = section === "Quiet" ? "punctuate" : section === "Drop" ? "mirror" : section === "Build" ? "ripple" : i % 2 ? "answer" : "ripple";
     const lasers = section === "Quiet" || (section === "Groove" && i % 8 === 7 && levels[i] < loud) ? "none"
       : section === "Drop" ? (dropAge < 2 || Math.floor(dropAge)%4 === 0 ? "all" : Math.floor(dropAge)%4 === 1 ? "top" : Math.floor(dropAge)%4 === 2 ? "bottom" : "all")

@@ -3,6 +3,8 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, readdir, realpath, stat, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve, sep } from "node:path";
+import { readPerformanceMetadata } from "./performance-metadata";
+import { artworkKey, readUsbArtwork } from "./artwork-cache";
 import { parseFile } from "music-metadata";
 import type { LocalLibraryIndex, LocalTrack, LocalVolume } from "./types";
 import { hasRekordboxLibrary, readRekordboxLibrary } from "./rekordbox";
@@ -21,8 +23,12 @@ function stableId(value: string) {
 }
 
 export function assertLocalRequest(request: Request) {
-  const hostname = new URL(request.url).hostname;
-  if (!["localhost", "127.0.0.1", "::1"].includes(hostname)) {
+  const url=new URL(request.url);
+  const hostname=url.hostname;
+  const headerHost=request.headers.get("host");
+  const headerHostname=headerHost?new URL(`${url.protocol}//${headerHost}`).hostname:hostname;
+  const local=["localhost","127.0.0.1","::1","[::1]"];
+  if (!local.includes(hostname)||!local.includes(headerHostname)) {
     throw new Error("Local USB access is only available from this Mac.");
   }
 }
@@ -47,7 +53,7 @@ async function writeIndex(index: LocalLibraryIndex) {
 let analysisWriteQueue = Promise.resolve();
 
 export function persistTrackAnalysis(trackId: string, analysis: { bpm: number | null; musicalKey: string | null }) {
-  analysisWriteQueue = analysisWriteQueue.then(async () => {
+  analysisWriteQueue = analysisWriteQueue.catch(()=>{}).then(async () => {
     const index = await readIndex();
     const track = index.tracks.find((candidate) => candidate.id === trackId);
     if (!track || (track.bpm === analysis.bpm && track.musicalKey === analysis.musicalKey)) return;
@@ -197,9 +203,15 @@ export async function listTracks(): Promise<LocalTrack[]> {
   const [index, mounted] = await Promise.all([readIndex(), discoverVolumes()]);
   const mountedIds = new Set(mounted.map((volume) => volume.id));
   const selectedIds = new Set(index.selectedVolumeIds);
+  const performance=await readPerformanceMetadata(mounted);
+  const artwork = new Map(await Promise.all(mounted.map(async volume => [volume.id, await readUsbArtwork(volume.rootPath)] as const)));
   return index.tracks
     .filter((track) => selectedIds.has(track.volumeId))
-    .map((track) => ({ ...track, available: mountedIds.has(track.volumeId) }))
+    .map((track) => {
+      const imported = artwork.get(track.volumeId)?.[artworkKey(track.relativePath)];
+      const metadata=performance(track);
+      return { ...track, ...(metadata?{performance:metadata,...(metadata.bpm?{bpm:metadata.bpm}:{}),...(metadata.musicalKey?{musicalKey:metadata.musicalKey}:{})}:{}), available: mountedIds.has(track.volumeId), ...(imported?.relativePath === track.relativePath ? { hasArtwork: true, artworkVersion: imported.verifiedAt, soundcloudUrl: imported.url, soundcloudArtist: imported.uploader } : {}) };
+    })
     .sort((a, b) => a.title.localeCompare(b.title));
 }
 
@@ -213,5 +225,5 @@ export async function resolveTrackPath(trackId: string) {
   const canonical = await realpath(candidate).catch(() => null);
   const canonicalRoot = await realpath(volume.rootPath);
   if (!canonical || (canonical !== canonicalRoot && !canonical.startsWith(`${canonicalRoot}${sep}`))) return null;
-  return { path: canonical, track };
+  return { path: canonical, track, volumeRoot: canonicalRoot };
 }

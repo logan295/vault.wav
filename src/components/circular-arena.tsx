@@ -1,3 +1,4 @@
+import { dropLookAt, dropShutterAt, eyeDropTarget } from "@/lib/local-audio/drop-choreography";
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef, type RefObject } from "react";
 import * as THREE from "three";
@@ -8,7 +9,7 @@ const rigRows = [-4, 3, 10, 17];
 
 export const CEILING_PATTERNS = ["Music sync", "Row chase", "Mirror sweep", "Beat pulse", "Steady", "Off", "Clockwise", "Counterclockwise", "Fan", "Cross sweep", "Wave", "Alternating", "Vertical columns", "Parallel rake", "Horizontal plane", "Mirrored fans", "Crossfire"] as const;
 export type CeilingPattern = (typeof CEILING_PATTERNS)[number];
-export type ArenaFrame = RefObject<{ time: number; beat: number; hit: number; attack: number; dropBeat: number | null; cue?: SongCue; attackIndex: number; bpm: number }>;
+export type ArenaFrame = RefObject<{ time: number; beat: number; hit: number; attack: number; dropBeat: number | null; cue?: SongCue; attackIndex: number; bpm: number; laserLevel: number; laserManual: boolean }>;
 
 export function RigRod({ from, to, radius = .035 }: { from: [number, number, number]; to: [number, number, number]; radius?: number }) {
   const { position, quaternion, length } = useMemo(() => {
@@ -137,7 +138,11 @@ export function ArenaMovingHead({ position, side, row, color, power, haze, movem
     if (playing && mode === "Alternating") active = (step + row + (side < 0 ? 1 : 0)) % 2 === 0 ? 1 : 0;
     if (playing && mode === "Beat pulse") active = Math.max(0, 1 - (beat % 1) * 4);
     if (mode === "Off") active = 0;
-    lens.current.opacity = active * power;
+    if (pattern === "Music sync" && playing && cue) {
+      const build = cue.section === "Build" ? Math.min(1, (time-cue.time)/Math.max(.01,cue.end-cue.time)) : 0;
+      active *= cue.section === "Quiet" ? .35 : cue.section === "Build" ? .45+build*.5 : cue.section === "Drop" ? 1.2 : .7;
+    }
+    lens.current.opacity = Math.min(1, active * power);
     if (washMaterial.current) {
       washMaterial.current.uniforms.tint.value.set(color);
       washMaterial.current.uniforms.power.value = active * power * haze * .48;
@@ -164,7 +169,7 @@ export function ArenaMovingHead({ position, side, row, color, power, haze, movem
   </group>;
 }
 
-export function CircularArena({ power, color, colors, speed, pattern, playing, frame, haze, movement }: { colors: string[]; speed: number; power: number; color: string; pattern: CeilingPattern; haze: number; movement: number; playing: boolean; frame: ArenaFrame }) {
+export function CircularArena({ ambient = .12, power, color, colors, speed, pattern, playing, frame, haze, movement }: { ambient?: number; colors: string[]; speed: number; power: number; color: string; pattern: CeilingPattern; haze: number; movement: number; playing: boolean; frame: ArenaFrame }) {
   const sculpture = useMemo(() => {
     const shape = new THREE.Shape();
     shape.moveTo(0, 2.1);
@@ -183,10 +188,10 @@ export function CircularArena({ power, color, colors, speed, pattern, playing, f
   }, []);
 
   return <group>
-    <hemisphereLight args={["#748da3", "#17151b", .48]} />
-    <pointLight position={[0,5,-6]} color="#c4d5e4" intensity={14} distance={17} decay={2} />
+    <hemisphereLight args={["#748da3", "#17151b", ambient * .8]} />
+    <pointLight position={[0,5,-6]} color="#c4d5e4" intensity={ambient * 24} distance={17} decay={2} />
     {[-1,1].map((side) => <group key={`aisle-${side}`}>
-      <pointLight position={[side*12,2.5,2]} color="#ffc585" intensity={8} distance={9} decay={2} />
+      <pointLight position={[side*12,2.5,2]} color="#ffc585" intensity={ambient * 12} distance={9} decay={2} />
       {[0,1,2,3,4].map((step) => <mesh key={step} position={[side*6.3,-.05+step*.14,-5.2]}><boxGeometry args={[.7,.13,3.5-step*.22]} /><meshStandardMaterial color="#28303b" roughness={.87} metalness={.25} /></mesh>)}
     </group>)}
     {[-1, 1].map((side) => <group key={`venue-wall-${side}`} position={[side * 17.7, 4.2, 4]}>
@@ -198,13 +203,13 @@ export function CircularArena({ power, color, colors, speed, pattern, playing, f
     {Array.from({ length: 10 }, (_, panel) => <mesh key={`roof-${panel}`} position={[0, 9.2, (panel - 4.5) * 4]}>
       <boxGeometry args={[36, .12, 3.91]} /><meshStandardMaterial color="#20252c" metalness={.3} roughness={.72} />
     </mesh>)}
-    <mesh position={[0, -.27, 5]}><boxGeometry args={[36, .5, 45]} /><meshStandardMaterial color="#10151e" roughness={.63} /></mesh>
-    <mesh position={[0, .4, -5]}><cylinderGeometry args={[5.8, 6.35, .8, 96, 1, true]} /><meshStandardMaterial color="#151923" metalness={.65} roughness={.3} /></mesh>
+    <mesh receiveShadow position={[0, -.27, 5]}><boxGeometry args={[36, .5, 45]} /><meshStandardMaterial color="#10151e" roughness={.63} /></mesh>
+    <mesh castShadow receiveShadow position={[0, .4, -5]}><cylinderGeometry args={[5.8, 6.35, .8, 96, 1, true]} /><meshStandardMaterial color="#151923" metalness={.65} roughness={.3} /></mesh>
     <mesh position={[0, .81, -5]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[1.85, 5.8, 96]} /><meshStandardMaterial color="#171d28" metalness={.58} roughness={.35} /></mesh>
     <mesh position={[0, .78, -5]} rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[5.79, .035, 6, 96]} /><meshBasicMaterial color="#d9edff" toneMapped={false} transparent opacity={power} /></mesh>
     <mesh position={[0, .47, -5]}><cylinderGeometry args={[1.85, 1.85, .68, 64, 1, true]} /><meshStandardMaterial color="#1b2330" side={THREE.DoubleSide} /></mesh>
     <mesh position={[0, .27, -5]}><cylinderGeometry args={[1.85, 1.85, .08, 64]} /><meshStandardMaterial color="#252b35" /></mesh>
-    <mesh position={[0, .56, -5.7]}><boxGeometry args={[2.8, 1.12, .72]} /><meshStandardMaterial color="#202734" /></mesh>
+    <mesh castShadow receiveShadow position={[0, .56, -5.7]}><boxGeometry args={[2.8, 1.12, .72]} /><meshStandardMaterial color="#202734" /></mesh>
     {[-.91, .91].map((x) => <group key={x} position={[x, 1.16, -5.7]}>
       <mesh><boxGeometry args={[.69, .09, .46]} /><meshStandardMaterial color="#2e333d" roughness={.68} /></mesh>
       <mesh position={[0, .058, .035]}><cylinderGeometry args={[.145, .145, .019, 24]} /><meshStandardMaterial color="#536174" metalness={.48} roughness={.4} /></mesh>
@@ -274,7 +279,7 @@ const emitters = rigRows.flatMap((z) =>
   [-9.7, -6.3, -1.7, 1.7, 6.3, 9.7].map((x) => [x, 7.98, z]),
 ).concat(Array.from({ length: 12 }, (_, index) => [(index - 5.5) * .94, .85, -4.1]), CENTER_FIXTURES);
 
-export const ARENA_PATTERNS = ["Fan sweep", "Cross lattice", "Vertical wave", "Scissor", "Ripple chase", "Parallel sheet", "Center burst", "Split wings", "Twin tunnels", "Diamond cage", "Canopy arch", "Low horizon", "Clockwise fan", "Counterclockwise fan", "Counter-rotating wings", "Orbit tunnel", "Butterfly wings", "Tilted blades", "Woven rings", "Radial crown", "Wide fan", "Ceiling fan", "Vertical fan", "Static fan", "Vertical columns", "Mirrored ceiling fans", "Balcony lattice", "Parallel rake", "Crossfire canopy"] as const;
+export const ARENA_PATTERNS = ["Fan sweep", "Cross lattice", "Vertical wave", "Scissor", "Ripple chase", "Parallel sheet", "Center burst", "Split wings", "Twin tunnels", "Diamond cage", "Canopy arch", "Low horizon", "Clockwise fan", "Counterclockwise fan", "Counter-rotating wings", "Orbit tunnel", "Butterfly wings", "Tilted blades", "Woven rings", "Radial crown", "Wide fan", "Ceiling fan", "Vertical fan", "Static fan", "Vertical columns", "Mirrored ceiling fans", "Balcony lattice", "Parallel rake", "Crossfire canopy", "Liquid curtain", "Double helix", "Expanding iris", "Wave ribbons", "Prism blossom", "Slow pendulum"] as const;
 type ArenaBank = "top" | "bottom";
 
 const choreography = [
@@ -320,13 +325,14 @@ function shutter(gate: (typeof choreography)[number]["gate"], beat: number, bank
   }
 }
 
-export function ArenaLasers({ flash, frame, playing, pattern, banks, cues, intensity, spread, density, motion, speed, colors, width, fixtures = emitters, rays = 5 }: {
+export function ArenaLasers({ flash, frame, playing, pattern, banks, cues, intensity, spread, density, motion, speed, colors, width, fixtures = emitters, rays = 5, eyeCount = 0, eyesOnly = false }: { eyeCount?: number; eyesOnly?: boolean;
   fixtures?: number[][]; rays?: number; flash: boolean; frame: ArenaFrame; playing: boolean;
   pattern: number | null; banks: Record<ArenaBank, number | null>; cues: ArenaCue[];
   intensity: number; spread: number; density: number; motion: number; speed: number; colors: string[]; width: number;
 }) {
   const scannerClock = useRef({ beat: 0, phase: 0 });
   const beams = useRef<THREE.InstancedMesh>(null);
+  const halos = useRef<THREE.InstancedMesh>(null);
   const transform = useMemo(() => new THREE.Object3D(), []);
   const direction = useMemo(() => new THREE.Vector3(), []);
   const up = useMemo(() => new THREE.Vector3(0, 1, 0), []);
@@ -341,8 +347,8 @@ export function ArenaLasers({ flash, frame, playing, pattern, banks, cues, inten
     const { time, bpm, cue: programmed, attackIndex, beat: currentBeat, hit: beatHit, attack, dropBeat } = frame.current;
     const clock = scannerClock.current;
     const beatDelta = currentBeat - clock.beat;
-    if (Math.abs(beatDelta) > .5) clock.phase = currentBeat * speed;
-    else if (playing && beatDelta > 0) clock.phase += beatDelta * speed;
+    if (Math.abs(beatDelta) > .5) clock.phase = showMotionAt(programmed, time, bpm) * speed;
+    else if (playing && beatDelta > 0) clock.phase += beatDelta * speed * (programmed?.rate ?? 1);
     clock.beat = currentBeat;
     const scannerBeat = clock.phase;
     const drop = dropBeat !== null;
@@ -357,29 +363,31 @@ export function ArenaLasers({ flash, frame, playing, pattern, banks, cues, inten
     const master = pattern !== null ? pattern : cue ? Number(cue.look === "lattice") : null;
 
     fixtures.forEach(([x, y, z], index) => {
-      const floor = y < (fixtures === emitters ? 2 : 5.5);
+      const eye = index < eyeCount;
+      const floor = eye ? index % 2 === 1 : y < (fixtures === emitters ? 2 : 5.5);
       const center = fixtures === emitters && index >= 36;
       const bank = floor ? "bottom" : "top";
       const baseLook = center && programmed ? programmed.center : drop && !programmed ? (floor ? 3 : 1) : scene[bank];
-      const auto = fixtures === emitters ? baseLook : [24,27,25,26,28,20,22][baseLook % 7];
-      const look = flash ? 1 : (center ? master : banks[bank] ?? master) ?? auto;
-      const motionBeat = programmed ? showMotionAt(programmed,time,bpm) * speed : scannerBeat;
+      const auto = fixtures === emitters || eyeCount>0 ? baseLook : [24,27,25,26,28,20,22][baseLook % 7];
+      const dropLook = dropLookAt(dropBeat,auto);
+      const look = flash ? 1 : (center ? master : banks[bank] ?? master) ?? (drop ? dropLook : auto);
+      const motionBeat = scannerBeat;
       const attackStep = (attackIndex % 4) * Math.PI / 2;
-      const phase = motionBeat * Math.PI + (floor ? Math.PI / 2 : 0) + attackStep * .65;
+      const phase = motionBeat * Math.PI + (floor ? Math.PI / 2 : 0) + attackStep * .08;
       const lane = index % 6;
       const pair = Math.min(lane, 5 - lane);
       const side = Math.sign(x);
       const row = Math.floor(index / 6);
       const gate = scene.gate;
-      const dropGate = dropBeat !== null && (dropBeat < .48 || (dropBeat >= .75 && dropBeat < 1.55 && (pair + Number(floor)) % 2 === 0));
+      const dropGate = dropShutterAt(dropBeat,floor,pair);
       const accent = attack > .42 && (pair + row) % 3 === 1;
       const preview = !programmed && time === 0;
-      const open = flash || (preview ? pair === 1 && row % 2 === 0 : (drop
+      const open = frame.current.laserManual || flash || (preview ? pair === 1 && row % 2 === 0 : (drop
         ? dropGate
         : !phraseRest && (accent || shutter(gate, currentBeat, bank, lane, row))));
-      const programEnabled = preview || flash || !programmed || programmed.lasers === "all"
+      const programEnabled = frame.current.laserManual || preview || flash || !programmed || (eye && drop) || programmed.lasers === "all"
         || programmed.lasers === (center ? "center" : bank);
-      const level = programEnabled && open && Math.min(lane, 5 - lane) < Math.ceil(density * 3) ? intensity * (.72 + beatHit * .28) : 0;
+      const level = (!eyesOnly || eye) && programEnabled && open && Math.min(lane, 5 - lane) < Math.ceil(density * 3) ? intensity * frame.current.laserLevel * (.72 + beatHit * .28) : 0;
       const autoColors = programmed?.section === "Drop" ? ["#ffffff", "#00e5ff", "#9a70ff"] : programmed?.section === "Build" ? ["#ff3d98", "#ff9100", "#9a70ff"] : ["#00e5ff", "#2a8cff", "#45ffe2"];
       const color = flash ? white : palette[(pair + row) % palette.length] ?? (programmed ? blue.set(autoColors[(pair + row) % 3]) : drop || look === 1 ? white : blue);
       for (let ray = 0; ray < rays; ray++) {
@@ -434,6 +442,13 @@ export function ArenaLasers({ flash, frame, playing, pattern, banks, cues, inten
         }
         if (look === 27) { endX=x;endY=floor ? 6.5 : 2.2;rayEnabled=ray===0; }
         if (look === 28) { endX=-x+fanUnit*8;endY=floor ? 10.2 : 4.2;endZ=24; }
+        if (look === 29) { endX=x+fanUnit*(7+spread*8); endY=7+Math.sin(phase*.24+fanUnit*2+row*.5)*2*motion; }
+        if (look === 30) { const a=phase*.22+fanUnit*Math.PI*2; endX=x+Math.cos(a)*(3+spread*5); endY=7+Math.sin(a+side*Math.PI)*3*motion; }
+        if (look === 31) { const a=ray/rays*Math.PI*2; const r=2+spread*4+(1+Math.sin(phase*.18))*2*motion; endX=Math.cos(a)*r; endY=7+Math.sin(a)*r*.55; }
+        if (look === 32) { endX=fanUnit*12; endY=6+Math.sin(fanUnit*3+phase*.28+row*.8)*3*motion; }
+        if (look === 33) { const a=ray/rays*Math.PI*2; const r=4+Math.sin(a*5+phase*.2)*2*motion; endX=Math.cos(a)*r*(.5+spread); endY=7+Math.sin(a)*r*.6; }
+        if (look === 34) { endX=x+Math.sin(phase*.12+side*.5)*8*motion+fanUnit*spread*5; endY=8+Math.cos(phase*.12)*2*motion; }
+        if(eye && drop && dropBeat !== null && master === null && banks[bank] === null){[endX,endY,endZ]=eyeDropTarget(dropBeat,side,index%2,fanUnit,phase);}
         if (fixtures !== emitters) {
           // Terminate the ray at the hall boundary, retaining the fan angle.
           let fraction = 1;
@@ -451,15 +466,17 @@ export function ArenaLasers({ flash, frame, playing, pattern, banks, cues, inten
         transform.updateMatrix();
         const beamIndex = index * rays + ray;
         mesh.setMatrixAt(beamIndex, transform.matrix);
-        mesh.setColorAt(beamIndex, tint.copy(color).multiplyScalar(level * (drop ? 1.65 : 1.25)));
+        mesh.setColorAt(beamIndex, tint.copy(color).multiplyScalar(level * (eye && drop ? 2.35 : drop ? 1.65 : 1.25)));
+        if(halos.current){transform.scale.x*=3.5;transform.scale.z*=3.5;transform.updateMatrix();halos.current.setMatrixAt(beamIndex,transform.matrix);halos.current.setColorAt(beamIndex,tint);}
       }
     });
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    if(halos.current){halos.current.instanceMatrix.needsUpdate=true;if(halos.current.instanceColor)halos.current.instanceColor.needsUpdate=true;}
   });
 
-  return <instancedMesh ref={beams} args={[undefined, undefined, fixtures.length * rays]} frustumCulled={false}>
+  return <><instancedMesh ref={halos} args={[undefined,undefined,fixtures.length*rays]} frustumCulled={false}><cylinderGeometry args={[1,1,1,5,1,true]}/><meshBasicMaterial transparent opacity={.035} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false}/></instancedMesh><instancedMesh ref={beams} args={[undefined, undefined, fixtures.length * rays]} frustumCulled={false}>
     <cylinderGeometry args={[1, 1, 1, 5, 1, true]} />
     <meshBasicMaterial transparent opacity={.78} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
-  </instancedMesh>;
+  </instancedMesh></>;
 }

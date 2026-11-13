@@ -259,7 +259,7 @@ export default async function ReleasePage({
 
               <section className="border-t border-border pt-4.5">
                 <h4 className="mb-3.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                  The vault.wav pledge
+                  The .womp pledge
                 </h4>
                 <ul className="space-y-2 text-[13px] text-muted-foreground">
                   {[

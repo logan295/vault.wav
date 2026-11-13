@@ -6,7 +6,7 @@ export function Nav() {
     <div className="sticky top-0 z-20 border-b border-border bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-[58px] max-w-[1200px] items-center gap-8 px-8">
         <Link href="/" className="font-display text-sm font-bold tracking-tight">
-          vault<span className="text-coral">.wav</span>
+          <span className="text-[#1DB954]">.womp</span>
         </Link>
         <nav className="flex gap-6 text-sm font-semibold text-muted-foreground">
           <Link href="/" className="text-foreground">

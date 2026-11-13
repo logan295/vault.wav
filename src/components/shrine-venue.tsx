@@ -87,10 +87,10 @@ function CrossRig({x,z,row,power,colors,pattern,speed,movement,haze,playing,fram
   </group>;
 }
 
-export function ShrineVenue({power,colors,pattern,speed,movement,haze,playing,frame}: {power:number;colors:string[];pattern:CeilingPattern;speed:number;movement:number;haze:number;playing:boolean;frame:ArenaFrame}) {
+export function ShrineVenue({ambient = .12,power,colors,pattern,speed,movement,haze,playing,frame}: {ambient?:number;power:number;colors:string[];pattern:CeilingPattern;speed:number;movement:number;haze:number;playing:boolean;frame:ArenaFrame}) {
   const roomLights=useRef<THREE.PointLight[]>([]);
   useFrame(()=>{
-    roomLights.current.forEach((light,index)=>{light.color.set(colors[index%colors.length]);light.intensity=power*(playing ? .18+frame.current.hit*.82 : .55)*90;});
+    roomLights.current.forEach((light,index)=>{light.color.set(colors[index%colors.length]);light.intensity=ambient*power*(playing ? .18+frame.current.hit*.32 : .3)*24;});
   });
   const roof=useMemo(()=>{
     const positions:number[]=[]; const indices:number[]=[];
@@ -106,8 +106,8 @@ export function ShrineVenue({power,colors,pattern,speed,movement,haze,playing,fr
   const arch=useMemo(()=>{const curve=new THREE.EllipseCurve(0,0,15.2,5.5,0,Math.PI,false,0);return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(curve.getPoints(40).map(p=>new THREE.Vector3(p.x,p.y,0))),48,.12,8,false);},[]);
   useEffect(()=>()=>arch.dispose(),[arch]);
   return <group>
-    <hemisphereLight args={["#a5b0bd","#312c29",.27]} />
-    <pointLight position={[0,10,1]} color="#ffe1a4" intensity={32} distance={40} decay={2} />
+    <hemisphereLight args={["#a5b0bd","#312c29",ambient*.7]} />
+    <pointLight position={[0,10,1]} color="#ffe1a4" intensity={ambient*24} distance={40} decay={2} />
     <mesh rotation={[-Math.PI/2,0,0]} position={[0,-.05,6]} receiveShadow><planeGeometry args={[31,49]} /><meshStandardMaterial map={wood} bumpMap={wood} bumpScale={.012} color="#b7a18a" roughness={.67} metalness={.08} /></mesh>
     {[-1,1].map(side=><group key={side}>
       <mesh position={[side*15.4,7,6]}><boxGeometry args={[.35,14,49]} /><meshStandardMaterial color="#8c8271" map={plaster} bumpMap={plaster} bumpScale={.045} roughness={.92} /></mesh>
@@ -122,9 +122,9 @@ export function ShrineVenue({power,colors,pattern,speed,movement,haze,playing,fr
     </group>)}
     <mesh geometry={roof}><meshStandardMaterial color="#252b2b" side={THREE.DoubleSide} roughness={.94} /></mesh>
     <mesh position={[0,6.9,-15.9]}><boxGeometry args={[31,14,.4]} /><meshStandardMaterial color="#73695c" map={plaster} bumpMap={plaster} bumpScale={.045} roughness={.94} /></mesh>
-    <mesh position={[0,.55,-12]}><boxGeometry args={[19,1.1,6]} /><meshStandardMaterial color="#1d2227" roughness={.9} /></mesh>
+    <mesh castShadow receiveShadow position={[0,.55,-12]}><boxGeometry args={[19,1.1,6]} /><meshStandardMaterial color="#1d2227" roughness={.9} /></mesh>
     <mesh position={[0,1.105,-12]}><boxGeometry args={[19,.035,6]} /><meshStandardMaterial color="#272c30" roughness={.8} /></mesh>
-    <mesh position={[0,1.75,-11]}><boxGeometry args={[3.7,1.3,1.2]} /><meshStandardMaterial color="#14181b" roughness={.65} metalness={.3} /></mesh>
+    <mesh castShadow receiveShadow position={[0,1.75,-11]}><boxGeometry args={[3.7,1.3,1.2]} /><meshStandardMaterial color="#14181b" roughness={.65} metalness={.3} /></mesh>
     {[-1.15,0,1.15].map(x=><group key={x} position={[x,2.45,-11]}>
       <mesh><boxGeometry args={[.9,.12,.65]} /><meshStandardMaterial color="#3d4349" roughness={.4} metalness={.55} /></mesh>
       <mesh position={[0,.072,0]}><cylinderGeometry args={[.21,.21,.025,20]} /><meshStandardMaterial color="#111820" metalness={.6} roughness={.3} /></mesh>

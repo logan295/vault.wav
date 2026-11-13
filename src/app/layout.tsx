@@ -12,7 +12,7 @@ const circular = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "vault.wav — your lossless library, everywhere.",
+  title: ".womp — your lossless library, everywhere.",
   description:
     "A private lossless music library for your WAV collection, playlists, offline listening, and remote playback.",
 };

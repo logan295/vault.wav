@@ -27,6 +27,7 @@ export type RekordboxMetadata = {
 };
 
 export type LocalTrack = {
+  performance?: {bpm?:number;musicalKey?:string;firstBeatSecs?:number;cue?:number;hotCues?:(number|null)[];analyzedAt?:string;updatedAt?:string};
   id: string;
   volumeId: string;
   sourceName: string;
@@ -35,6 +36,9 @@ export type LocalTrack = {
   artist: string | null;
   album: string | null;
   hasArtwork?: boolean;
+  artworkVersion?: string;
+  soundcloudUrl?: string;
+  soundcloudArtist?: string;
   durationSecs: number | null;
   sampleRate: number | null;
   bitDepth: number | null;
@@ -57,6 +61,11 @@ export type LocalLibraryIndex = {
 };
 
 export type LocalPlaylist = {
+  description?: string;
+  coverColor?: string;
+  coverId?: string | null;
+  usbVolumeName?: string;
+  usbConnected?: boolean;
   id: string;
   name: string;
   trackIds: string[];

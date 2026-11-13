@@ -11,6 +11,8 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    "work/**",
+    "public/audio/soundtouch-processor.js",
     "next-env.d.ts",
   ]),
 ]);

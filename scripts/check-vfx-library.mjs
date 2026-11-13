@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+const base=process.env.WOMP_TEST_ORIGIN||'http://127.0.0.1:3159';
+const video=await readFile('public/vj-loops/amber-reactor.mp4');
+const poster=await readFile('public/vj-loops/thumbs/amber-reactor.jpg');
+const form=new FormData();form.set('video',new File([video],'API test.mp4',{type:'video/mp4'}));form.set('poster',new File([poster],'poster.jpg',{type:'image/jpeg'}));
+const response=await fetch(base+'/api/local/vfx',{method:'POST',body:form});
+assert.equal(response.status,200,await response.clone().text());const {clip}=await response.json();
+assert.ok((await (await fetch(base+'/api/local/vfx')).json()).clips.some(item=>item.id===clip.id));
+const range=await fetch(base+clip.src,{headers:{range:'bytes=0-31'}});assert.equal(range.status,206);assert.deepEqual(Buffer.from(await range.arrayBuffer()),video.subarray(0,32));
+const suffix=await fetch(base+clip.src,{headers:{range:'bytes=-20'}});assert.equal(suffix.status,206);assert.deepEqual(Buffer.from(await suffix.arrayBuffer()),video.subarray(-20));
+assert.equal((await fetch(base+clip.src,{headers:{range:'bytes=999999999999-'}})).status,416);
+assert.equal((await fetch(base+clip.poster)).headers.get('content-type'),'image/jpeg');
+assert.equal((await fetch(base+'/api/local/vfx/invalid')).status,404);
+const denied=await fetch(base+'/api/local/vfx',{method:'POST',headers:{origin:'https://example.com'},body:form});assert.equal(denied.status,400);
+const invalid=new FormData();invalid.set('video',new File(['not a video'],'fake.mp4'));invalid.set('poster',new File([poster],'poster.jpg'));
+assert.equal((await fetch(base+'/api/local/vfx',{method:'POST',body:invalid})).status,400);
+console.log('VFX import, persisted listing, thumbnails, byte/suffix ranges, missing assets, invalid video and foreign-origin checks passed.');

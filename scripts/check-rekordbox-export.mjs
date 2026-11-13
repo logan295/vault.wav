@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import { buildRekordboxXml } from '../src/lib/local-audio/rekordbox-export.ts';
+const common = { volumeId:'usb',sourceName:'USB',relativePath:'a.wav',artist:'A & B',album:'<Album>',durationSecs:10,sampleRate:48000,bitDepth:24,bitrateKbps:2304,channels:2,codec:'WAV',fileSize:100,modifiedAtMs:0,available:true,location:'file://localhost/Volumes/USB/a%20%26%20b.wav' };
+const first = {...common,id:'b',title:'"First"',bpm:120,musicalKey:'Am',rekordbox:{cues:[{kind:'hot',slot:1,timeMs:1500,loopEndMs:3500,label:'Loop & go'}]}};
+const second = {...common,id:'a',title:'Second',rekordbox:null};
+const playlists=[{id:'p',name:'Set & test',trackIds:['b','missing','a'],createdAt:'',updatedAt:''},{id:'q',name:'Set & test',trackIds:['a'],createdAt:'',updatedAt:''}];
+const xml=buildRekordboxXml([first,second],playlists);
+assert.match(xml, /Name="&quot;First&quot;"/);assert.match(xml,/Artist="A &amp; B"/);assert.match(xml,/Album="&lt;Album&gt;"/);
+assert.match(xml,/POSITION_MARK Name="Loop &amp; go" Type="4" Start="1.5" End="3.5" Num="0"/);
+assert.match(xml,/Name="Set &amp; test" Entries="2" KeyType="0">\n        <TRACK Key="2"\/>\n        <TRACK Key="1"\/>/);
+assert.match(xml,/Name="Set &amp; test \(2\)"/);assert.doesNotMatch(xml,/<TEMPO/);
+assert.equal(xml,buildRekordboxXml([second,first],playlists));
+console.log('PASS: Rekordbox XML escaping, deterministic IDs, playlist order, missing references, duplicate names, cue units and hot-cue numbering.');
+if(process.argv.includes('--print'))process.stdout.write(xml);

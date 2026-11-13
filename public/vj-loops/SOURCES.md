@@ -96,3 +96,41 @@ Alpha in the Shrek MOV files is composited onto the LED wall black background. D
 | Apex | User clips | APEX.mp4 |
 
 The three EYEINFECTION DXV inputs report undecodable packets in this decoder. Browser copies retain source duration by repeating frames where decoding fails. CRAWL decoded 149 of 195 source frames, SPIDERS decoded 189 of 192, and ROTATE decoded 191 of 192.
+
+## Professional pack discovery (November 13, 2026)
+
+The booth's Visuals page links to the creators below. These are discovery links, not newly bundled third-party footage:
+
+- Beeple: https://beeple-crap.com/vjloops — the artist explicitly permits commercial and noncommercial visual use under Creative Commons; audio rights are separate. The Four Color Process pack's MediaFire download returned HTTP 403 during this pass, so no footage from it was added.
+- DocOptic Negated: https://docoptic.com/downloads/negated/ — five free seamless HD loops; creator checkout supplies the download. No checkout was completed.
+- Resolume: https://resolume.com/footage — professional licensed packs. Their footage license prohibits redistribution, so purchased content belongs in the user's private local library rather than the app bundle.
+
+The four Studio looks (Chrome tunnel, Monochrome architecture, Aurora silk, Particle eclipse) are original procedural shaders written for .womp. They are not footage from the providers above.
+
+Import H.264 MP4 clips via Visuals → Import MP4 loops. The app stores video and JPEG thumbnails alongside the desktop library data in `vfx/`, outside the replaceable app bundle. It supports HTTP byte ranges for efficient playback. HAP, DXV and MOV must be converted to H.264 MP4 first; there is no native HAP or DXV decoder in this build.
+
+## ImmerGround CC0 collection imported November 13, 2026
+
+Eight silent 1920×1080 H.264 loops were downloaded directly from the creator's links at https://immerground.com/loops. The page labels these files CC0, 32 beats at 120 BPM. The player uses the documented 120 BPM source grid for these clips. The files are unmodified; JPEG thumbnails were extracted at two seconds.
+
+- **Liquid Inferno**: https://files.immerground.com/loops/thermal/immerground-thermal-liquid-inferno-1080p.mp4
+- **Plasma Tunnel**: https://files.immerground.com/loops/thermal/immerground-thermal-tunnel-plasma-1080p.mp4
+- **RGB Wave**: https://files.immerground.com/loops/ascii-glitch/immerground-ascii-glitch-waves-rgb-glitch-1080p.mp4
+- **ASCII Tunnel**: https://files.immerground.com/loops/ascii-glitch/immerground-ascii-glitch-tunnel-ascii-dots-1080p.mp4
+- **Violet Tide**: https://files.immerground.com/loops/living-matter/immerground-living-matter-violet-tide-1080p.mp4
+- **Coral Bloom**: https://files.immerground.com/loops/living-matter/immerground-living-matter-coral-bloom-1080p.mp4
+- **Ink Helix**: https://files.immerground.com/loops/ink-smoke/immerground-ink-smoke-double-helix-1080p.mp4
+- **Magenta Smoke**: https://files.immerground.com/loops/ink-smoke/immerground-ink-smoke-magenta-smoke-1080p.mp4
+
+## Additional trippy collection, November 13, 2026
+
+Eight more silent 1080p H.264 / CC0 loops from the same official collection.
+
+- **Frost Fractals**: https://files.immerground.com/loops/living-matter/immerground-living-matter-frost-1080p.mp4
+- **Slime Veins**: https://files.immerground.com/loops/living-matter/immerground-living-matter-slime-veins-1080p.mp4
+- **Bone Maze**: https://files.immerground.com/loops/living-matter/immerground-living-matter-bone-maze-1080p.mp4
+- **Split Cells**: https://files.immerground.com/loops/living-matter/immerground-living-matter-split-cells-1080p.mp4
+- **Indigo Drop**: https://files.immerground.com/loops/ink-smoke/immerground-ink-smoke-indigo-drop-1080p.mp4
+- **Gold Bleed**: https://files.immerground.com/loops/ink-smoke/immerground-ink-smoke-gold-bleed-1080p.mp4
+- **Ink Storm**: https://files.immerground.com/loops/ink-smoke/immerground-ink-smoke-ink-storm-1080p.mp4
+- **Black Tide**: https://files.immerground.com/loops/ink-smoke/immerground-ink-smoke-black-tide-1080p.mp4

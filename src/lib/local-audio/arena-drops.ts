@@ -1,6 +1,6 @@
 /** Find sustained returns of bass after a quieter passage, timed at the leading edge. */
-export function arenaDrops(low: number[], full: number[], duration: number): number[] {
-  if (!low.length || !full.length || duration <= 0) return [];
+export function arenaDrops(low: number[], full: number[], duration: number, bpm = 120): number[] {
+  if (!low.length || !full.length || !Number.isFinite(duration) || duration <= 0) return [];
 
   const interval = .025;
   const count = Math.ceil(duration / interval);
@@ -14,18 +14,22 @@ export function arenaDrops(low: number[], full: number[], duration: number): num
   }
 
   const drops: number[] = [];
-  for (let bin = 40; bin + 28 < count; bin++) {
+  for (let bin = 80; bin + 80 < count; bin++) {
     const onset = (bass[bin + 4] - bass[bin]) / 4;
     const recent = (bass[bin] - bass[bin - 8]) / 8;
     const before = (bass[bin - 4] - bass[bin - 40]) / 36;
     const after = (bass[bin + 28] - bass[bin]) / 28;
     const energyRise = (energy[bin + 16] - energy[bin]) / 16 - (energy[bin] - energy[bin - 32]) / 32;
-    if (onset > .44 && onset - recent > .14 && after - before > .15 && energyRise > .045) {
+    // A single kick or fill is not a drop: require a sustained phrase-level return.
+    const beforePhrase = (bass[bin - 8] - bass[bin - 80]) / 72;
+    const afterPhrase = (bass[bin + 80] - bass[bin]) / 80;
+    const sustained = afterPhrase - beforePhrase > .1 && afterPhrase > beforePhrase * 1.22;
+    if (sustained && onset > .44 && onset - recent > .14 && after - before > .15 && energyRise > .045) {
       // Anchor to the first rising bin inside the short attack window.
       let edge = bin;
       while (edge < bin + 3 && bass[edge + 1] - bass[edge] < recent + .1) edge++;
       drops.push(edge * interval);
-      bin += 100;
+      bin += Math.round((960 / (Number.isFinite(bpm) && bpm > 0 ? bpm : 120)) / interval);
     }
   }
   return drops;
