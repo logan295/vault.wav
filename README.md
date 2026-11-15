@@ -147,3 +147,7 @@ Run these before submitting, and report any failures rather than hiding them. No
 - [VJ media sources and usage restrictions](public/vj-loops/SOURCES.md)
 
 There is no repository-wide license file at present. Public source access does not automatically grant redistribution rights. Check the media notices and ask the maintainer before redistributing assets or assuming commercial-use permission.
+
+## Ketamind · Wonky 15
+
+Audition fifteen original, beat-driven visuals at `/ketamind`, or choose **Ketamind · Wonky 15** in the live console's Visuals collection. Each has distinct geometry and a different rhythmic assignment. See [the pairings and offline audition guide](docs/ketamind-wonky-15.md).

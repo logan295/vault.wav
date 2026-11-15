@@ -11,6 +11,8 @@ import * as THREE from "three";
 import { useLiveShow } from "./use-live-show";
 import { LiveInputControls } from "./live-input-controls";
 import { useLocalPlayback, type PlaybackSample } from "./local-playback-provider";
+import { KETAMIND_VISUALS, ketamindIndex } from "@/lib/visuals/ketamind";
+import { KetamindMaterial } from "./ketamind-material";
 import { VfxVideoMaterial, type VideoFit } from "./vfx-video-material";
 import { ShrineVenue, SHRINE_LASERS } from "./shrine-venue";
 import { CompactShowConsole, DeskFader } from "./compact-show-console";
@@ -53,7 +55,7 @@ const STAGE_PRESETS: Record<StagePreset, { label: string; rig: RigLayout; screen
   bunker: { label: "Bass bunker", rig: "floor", screens: "totems", camera: "arena" },
   halo: { label: "Halo arena", rig: "ring", screens: "orbit", camera: "arena" },
 };
-const VJ_LOOPS = [
+const VIDEO_LOOPS = [
   ["eyeinfection-spiders", "Eyeinfection Spiders", "EYEINFECTION"],
   ["eyeinfection-rotate", "Eyeinfection Rotate", "EYEINFECTION"],
   ["eyeinfection-crawl", "Eyeinfection Crawl", "EYEINFECTION"],
@@ -85,6 +87,7 @@ const VJ_LOOPS = [
   ["alien-lab", "Alien Laboratory"], ["psychedelic-ink", "Psychedelic Ink"], ["wormhole", "Deep Space Wormhole"], ["space-nebula", "Bass Nebula"], ["orange-liquid", "Orange Hypnosis"], ["blue-liquid", "Blue Hypnosis"], ["motion-kaleidoscope", "Motion Kaleidoscope"], ["pink-light-tunnel", "Pink Light Tunnel"],
   ["exploring-cosmos", "Exploring the Cosmos"], ["fractal-space-tunnel", "Fractal Space Tunnel"], ["fluorescent-nebula", "Fluorescent Nebula"], ["liquid-galaxy", "Liquid Galaxy"], ["intergalactic-journey", "Intergalactic Journey"], ["night-city-drive", "Night City Drive"], ["surreal-dancer", "Surreal Dancer"], ["starry-sky-travel", "Starry Sky Travel"], ["moonlight-alien", "Moonlight Alien"],
 ].map(([id, label, group]) => ({ id, label, group: group || "Library", src: `/vj-loops/${id}.mp4`, poster: `/vj-loops/thumbs/${id}.jpg` }));
+const VJ_LOOPS = [...KETAMIND_VISUALS, ...VIDEO_LOOPS];
 const LASER_BODY = new THREE.CylinderGeometry(.13, .17, .3, 12);
 const LASER_LENS = new THREE.CircleGeometry(.075, 16);
 const LASER_VOLUME = new THREE.ConeGeometry(.105, 8.1, 16, 1, true);
@@ -271,7 +274,8 @@ function VjWall({ src, position, rotation = [0, 0, 0], scale = [1, 1, 1], shape 
   scale?: [number, number, number]; shape?: ScreenShape; playing: boolean; speed: number; impact: number; power: number; fit: VideoFit;
 }) {
   const aspect = (shape === "rect" ? 4.82 / 2.42 : 1) * Math.abs(scale[0] / scale[1]);
-  const video = <VfxVideoMaterial src={src} playing={playing} aspect={aspect} diamond={shape === "diamond"} fit={fit}
+  const ketamind = ketamindIndex(src);
+  const video = ketamind >= 0 ? <KetamindMaterial index={ketamind} clock={() => arenaFrame?.current ?? {beat:0,time:0,bpm:120}} aspect={aspect} diamond={shape === "diamond"} fit={fit} power={power} depthTest={!!arenaFrame} /> : <VfxVideoMaterial src={src} playing={playing} aspect={aspect} diamond={shape === "diamond"} fit={fit}
     clock={arenaFrame ? () => arenaFrame.current : undefined} power={power} hit={() => arenaFrame?.current.hit ?? impact} speed={speed} depthTest={!!arenaFrame} />;
   return <group position={position} rotation={rotation} scale={scale}>
     <group rotation={shape === "diamond" ? [0, 0, Math.PI / 4] : undefined}>

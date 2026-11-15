@@ -1,0 +1,152 @@
+[
+  {
+    "id": "gloop-cathedral",
+    "label": "Gloop Cathedral",
+    "pairing": "Quarter-note kicks inflate the liquid columns; drops open the chamber.",
+    "color": "#baff28",
+    "index": 0,
+    "group": "Ketamind · Wonky 15",
+    "src": "ketamind:gloop-cathedral",
+    "poster": "/ketamind/renders/gloop-cathedral.png"
+  },
+  {
+    "id": "jawbreaker-oracle",
+    "label": "Jawbreaker Oracle",
+    "pairing": "Half-time snares snap the teeth shut; kicks dilate the mouth.",
+    "color": "#ff518c",
+    "index": 1,
+    "group": "Ketamind · Wonky 15",
+    "src": "ketamind:jawbreaker-oracle",
+    "poster": "/ketamind/renders/jawbreaker-oracle.png"
+  },
+  {
+    "id": "triplet-tentacles",
+    "label": "Triplet Tentacles",
+    "pairing": "Three tentacle contractions per beat; bar downbeats reverse the curl.",
+    "color": "#b088ff",
+    "index": 2,
+    "group": "Ketamind · Wonky 15",
+    "src": "ketamind:triplet-tentacles",
+    "poster": "/ketamind/renders/triplet-tentacles.png"
+  },
+  {
+    "id": "subfloor-worm",
+    "label": "Subfloor Worm",
+    "pairing": "Kicks send a compression wave through the worm; eighth notes ripple its skin.",
+    "color": "#39ffd2",
+    "index": 3,
+    "group": "Ketamind · Wonky 15",
+    "src": "ketamind:subfloor-worm",
+    "poster": "/ketamind/renders/subfloor-worm.png"
+  },
+  {
+    "id": "rubber-duck-reactor",
+    "label": "Rubber Duck Reactor",
+    "pairing": "Kicks squash the duck; offbeats spring it back; drops overload the halo.",
+    "color": "#ffdb30",
+    "index": 4,
+    "group": "Ketamind · Wonky 15",
+    "src": "ketamind:rubber-duck-reactor",
+    "poster": "/ketamind/renders/rubber-duck-reactor.png"
+  },
+  {
+    "id": "fractal-fungus",
+    "label": "Fractal Fungus",
+    "pairing": "Mushroom caps bloom every two beats; sixteenths scatter spores.",
+    "color": "#ff8a3d",
+    "index": 5,
+    "group": "Ketamind · Wonky 15",
+    "src": "ketamind:fractal-fungus",
+    "poster": "/ketamind/renders/fractal-fungus.png"
+  },
+  {
+    "id": "chrome-centipede",
+    "label": "Chrome Centipede",
+    "pairing": "Eighth notes advance the legs; snares kick the chrome spine sideways.",
+    "color": "#8ccfff",
+    "index": 6,
+    "group": "Ketamind · Wonky 15",
+    "src": "ketamind:chrome-centipede",
+    "poster": "/ketamind/renders/chrome-centipede.png"
+  },
+  {
+    "id": "goblin-laundry",
+    "label": "Goblin Laundry",
+    "pairing": "Four-beat fabric folds with snare-triggered checkerboard inversion.",
+    "color": "#ff74fa",
+    "index": 7,
+    "group": "Ketamind · Wonky 15",
+    "src": "ketamind:goblin-laundry",
+    "poster": "/ketamind/renders/goblin-laundry.png"
+  },
+  {
+    "id": "bass-guillotine",
+    "label": "Bass Guillotine",
+    "pairing": "Kick/snare call-and-response opens and closes interlocking blades.",
+    "color": "#ff492f",
+    "index": 8,
+    "group": "Ketamind · Wonky 15",
+    "src": "ketamind:bass-guillotine",
+    "poster": "/ketamind/renders/bass-guillotine.png"
+  },
+  {
+    "id": "acid-ant-farm",
+    "label": "Acid Ant Farm",
+    "pairing": "Sixteenth-note ants travel the hex tunnels; kick pulses fill their chambers.",
+    "color": "#91ff4b",
+    "index": 9,
+    "group": "Ketamind · Wonky 15",
+    "src": "ketamind:acid-ant-farm",
+    "poster": "/ketamind/renders/acid-ant-farm.png"
+  },
+  {
+    "id": "pixel-poltergeist",
+    "label": "Pixel Poltergeist",
+    "pairing": "Snare hits scramble the pixel face; eighth-note eyes scan side to side.",
+    "color": "#f0f0d5",
+    "index": 10,
+    "group": "Ketamind · Wonky 15",
+    "src": "ketamind:pixel-poltergeist",
+    "poster": "/ketamind/renders/pixel-poltergeist.png"
+  },
+  {
+    "id": "time-slime",
+    "label": "Time Slime",
+    "pairing": "Bar-length clock rotations melt on every kick; snares displace the numerals.",
+    "color": "#56ddd8",
+    "index": 11,
+    "group": "Ketamind · Wonky 15",
+    "src": "ketamind:time-slime",
+    "poster": "/ketamind/renders/time-slime.png"
+  },
+  {
+    "id": "eyeball-carousel",
+    "label": "Eyeball Carousel",
+    "pairing": "Quarter-note pupil contractions with an eight-beat orbit and snare blinks.",
+    "color": "#f4b3ff",
+    "index": 12,
+    "group": "Ketamind · Wonky 15",
+    "src": "ketamind:eyeball-carousel",
+    "poster": "/ketamind/renders/eyeball-carousel.png"
+  },
+  {
+    "id": "jellyfish-switchyard",
+    "label": "Jellyfish Switchyard",
+    "pairing": "Offbeat jellyfish propulsion; triplet tentacle sparks; drop expansion.",
+    "color": "#469dff",
+    "index": 13,
+    "group": "Ketamind · Wonky 15",
+    "src": "ketamind:jellyfish-switchyard",
+    "poster": "/ketamind/renders/jellyfish-switchyard.png"
+  },
+  {
+    "id": "ketamind-singularity",
+    "label": "Ketamind Singularity",
+    "pairing": "Sixteen-beat accretion spiral; kicks bend spacetime; drops fracture the ring.",
+    "color": "#ffae56",
+    "index": 14,
+    "group": "Ketamind · Wonky 15",
+    "src": "ketamind:ketamind-singularity",
+    "poster": "/ketamind/renders/ketamind-singularity.png"
+  }
+]

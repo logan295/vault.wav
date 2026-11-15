@@ -96,3 +96,7 @@ Alpha in the Shrek MOV files is composited onto the LED wall black background. D
 | Apex | User clips | APEX.mp4 |
 
 The three EYEINFECTION DXV inputs report undecodable packets in this decoder. Browser copies retain source duration by repeating frames where decoding fails. CRAWL decoded 149 of 195 source frames, SPIDERS decoded 189 of 192, and ROTATE decoded 191 of 192.
+
+## Ketamind · Wonky 15, November 14, 2026
+
+The additional Ketamind collection is original procedural GLSL artwork, stored under `src/lib/visuals` and `public/ketamind`. It embeds none of the third-party video clips above. Its offline audition, rhythm assignments and rendered previews are documented in `docs/ketamind-wonky-15.md`.
