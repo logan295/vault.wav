@@ -100,3 +100,5 @@ The three EYEINFECTION DXV inputs report undecodable packets in this decoder. Br
 ## Ketamind · Wonky 15, November 14, 2026
 
 The additional Ketamind collection is original procedural GLSL artwork, stored under `src/lib/visuals` and `public/ketamind`. It embeds none of the third-party video clips above. Its offline audition, rhythm assignments and rendered previews are documented in `docs/ketamind-wonky-15.md`.
+
+The follow-up **Ketamind · Unbranded 10** collection adds ten original procedural scenes under `public/ketamind-2`. Their artwork has no branding, words or stock media. The first fifteen remain available. See `docs/ketamind-unbranded-10.md`.

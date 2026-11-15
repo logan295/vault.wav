@@ -1,0 +1,112 @@
+[
+  {
+    "id": "taffy-cyclotron",
+    "label": "Taffy Cyclotron",
+    "pairing": "Quarter notes stretch the candy torus; triplets braid its strands.",
+    "color": "#ff6bc8",
+    "index": 15,
+    "logoFree": true,
+    "group": "Ketamind · Unbranded 10",
+    "src": "ketamind:taffy-cyclotron",
+    "poster": "/ketamind-2/renders/taffy-cyclotron.png"
+  },
+  {
+    "id": "manta-melt",
+    "label": "Manta Melt",
+    "pairing": "Offbeat wing thrusts and half-time tail snaps; drops expand the fins.",
+    "color": "#48ffcd",
+    "index": 16,
+    "logoFree": true,
+    "group": "Ketamind · Unbranded 10",
+    "src": "ketamind:manta-melt",
+    "poster": "/ketamind-2/renders/manta-melt.png"
+  },
+  {
+    "id": "frogspawn-machine",
+    "label": "Frogspawn Machine",
+    "pairing": "Triplet cell contractions; quarter-note nuclei swell inside the spawn.",
+    "color": "#b4ff49",
+    "index": 17,
+    "logoFree": true,
+    "group": "Ketamind · Unbranded 10",
+    "src": "ketamind:frogspawn-machine",
+    "poster": "/ketamind-2/renders/frogspawn-machine.png"
+  },
+  {
+    "id": "prism-gremlin",
+    "label": "Prism Gremlin",
+    "pairing": "Snare hits flip the origami shards; eighth notes rotate their facets.",
+    "color": "#ff784b",
+    "index": 18,
+    "logoFree": true,
+    "group": "Ketamind · Unbranded 10",
+    "src": "ketamind:prism-gremlin",
+    "poster": "/ketamind-2/renders/prism-gremlin.png"
+  },
+  {
+    "id": "neon-bone-orchard",
+    "label": "Neon Bone Orchard",
+    "pairing": "Half-time bone branches grow; quarter notes pulse the joints.",
+    "color": "#d6caff",
+    "index": 19,
+    "logoFree": true,
+    "group": "Ketamind · Unbranded 10",
+    "src": "ketamind:neon-bone-orchard",
+    "poster": "/ketamind-2/renders/neon-bone-orchard.png"
+  },
+  {
+    "id": "accordion-abyss",
+    "label": "Accordion Abyss",
+    "pairing": "Eighth-note folds compress the zigzag corridor; drops widen its throat.",
+    "color": "#40c7ff",
+    "index": 20,
+    "logoFree": true,
+    "group": "Ketamind · Unbranded 10",
+    "src": "ketamind:accordion-abyss",
+    "poster": "/ketamind-2/renders/accordion-abyss.png"
+  },
+  {
+    "id": "slink-contraption",
+    "label": "Slink Contraption",
+    "pairing": "Sixteenth-note traveling waves coil the spring; kicks squash its height.",
+    "color": "#ffd738",
+    "index": 21,
+    "logoFree": true,
+    "group": "Ketamind · Unbranded 10",
+    "src": "ketamind:slink-contraption",
+    "poster": "/ketamind-2/renders/slink-contraption.png"
+  },
+  {
+    "id": "molten-marbles",
+    "label": "Molten Marbles",
+    "pairing": "Quarter-note collisions fling liquid spheres; snare hits split their highlights.",
+    "color": "#ff5784",
+    "index": 22,
+    "logoFree": true,
+    "group": "Ketamind · Unbranded 10",
+    "src": "ketamind:molten-marbles",
+    "poster": "/ketamind-2/renders/molten-marbles.png"
+  },
+  {
+    "id": "wobble-pudding",
+    "label": "Wobble Pudding",
+    "pairing": "Four-beat jelly-cube rotation with kick squash and snare surface ripples.",
+    "color": "#5c9eff",
+    "index": 23,
+    "logoFree": true,
+    "group": "Ketamind · Unbranded 10",
+    "src": "ketamind:wobble-pudding",
+    "poster": "/ketamind-2/renders/wobble-pudding.png"
+  },
+  {
+    "id": "elastic-imp",
+    "label": "Elastic Imp",
+    "pairing": "Half-time snare grins, quarter-note cheek inflation and triplet horn twitches.",
+    "color": "#f5a8ff",
+    "index": 24,
+    "logoFree": true,
+    "group": "Ketamind · Unbranded 10",
+    "src": "ketamind:elastic-imp",
+    "poster": "/ketamind-2/renders/elastic-imp.png"
+  }
+]

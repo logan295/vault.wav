@@ -28,13 +28,14 @@ function Preview({index,bpm,playing,source,revision,onBeat}:{index:number;bpm:nu
  });
  return <mesh frustumCulled={false}><planeGeometry args={[2,2]} /><KetamindMaterial index={index} clock={()=>transport.current} aspect={16/9} depthTest={false} screenSpace /></mesh>;
 }
-export function KetamindGallery(){
+export function KetamindGallery({collection}:{collection?:string}){
+ const visuals=collection?KETAMIND_VISUALS.filter(v=>v.group===collection):KETAMIND_VISUALS;
  const [currentBeat,setCurrentBeat]=useState(0);
- const [selected,setSelected]=useState(0),[bpm,setBpm]=useState(140),[playing,setPlaying]=useState(true),[revision,setRevision]=useState(0),[source,setSource]=useState<'preview'|'library'>('preview');
+ const [selected,setSelected]=useState(collection?15:0),[bpm,setBpm]=useState(140),[playing,setPlaying]=useState(true),[revision,setRevision]=useState(0),[source,setSource]=useState<'preview'|'library'>('preview');
  const player=useLocalPlayback(),reduced=useReducedMotion();const visual=KETAMIND_VISUALS[selected];
  return <main className={styles.gallery}>
   <header><Link href="/">← vault.wav</Link><span>Live visual collection</span></header>
-  <div className={styles.intro}><h1>Ketamind.<br/><em>Get weird.</em></h1><p>Fifteen different worlds. One shared beat.<br/>Select a visual to audition its rhythm, then find the pack in the show console.</p></div>
+  <div className={styles.intro}><h1>{collection?"Just visuals.":"Ketamind."}<br/><em>Get weird.</em></h1><p>{collection?"Ten new worlds. No logos.":"Twenty-five different worlds. One shared beat."}<br/>Select a visual to audition its rhythm, then find the pack in the show console.</p></div>
   <section className={styles.audition} aria-label="Visual audition">
    <div className={styles.screen} aria-label={`Preview: ${visual.label}`}><Canvas orthographic camera={{position:[0,0,10],zoom:100}} gl={{antialias:true,alpha:false}} dpr={[1,1.5]}><Preview index={selected} bpm={bpm} playing={playing&&!reduced} source={source} revision={revision} onBeat={setCurrentBeat}/></Canvas></div>
    <div className={styles.details}><div><h2>{visual.label}</h2><p>{visual.pairing}</p></div><div className={styles.controls}>
@@ -43,7 +44,7 @@ export function KetamindGallery(){
    </div></div>
    <p className={styles.note}><output aria-label="Current preview beat">Beat {currentBeat.toFixed(2)}</output> · {source==='preview'?'Preview clock only · no audio · first drop accent at beat 32.':'Uses the library playhead and imported beat grid. Live rekordbox timing is available in the main show console.'} {reduced?'Motion paused by your reduced-motion preference.':''}</p>
   </section>
-  <nav className={styles.grid} aria-label="Ketamind visuals">{KETAMIND_VISUALS.map(v=><button key={v.id} aria-pressed={v.index===selected} aria-label={`Preview ${v.label}`} onClick={()=>setSelected(v.index)} style={{'--accent':v.color} as React.CSSProperties}><span className={styles.thumbnail}><Image unoptimized src={v.poster} alt="" fill sizes="(max-width:640px) 50vw, 25vw"/></span><strong>{v.label}</strong><small>{v.pairing}</small></button>)}</nav>
-  <footer>In the live console: Visuals → Collection → Ketamind · Wonky 15. All fifteen respond to the same song transport as the lighting and lasers.</footer>
+  <nav className={styles.grid} aria-label="Ketamind visuals">{visuals.map(v=><button key={v.id} aria-pressed={v.index===selected} aria-label={`Preview ${v.label}`} onClick={()=>setSelected(v.index)} style={{'--accent':v.color} as React.CSSProperties}><span className={styles.thumbnail}><Image unoptimized src={v.poster} alt="" fill sizes="(max-width:640px) 50vw, 25vw"/></span><strong>{v.label}</strong><small>{v.pairing}</small></button>)}</nav>
+  <footer>In the live console: Visuals → Collection → {collection??"Ketamind · Wonky 15 / Unbranded 10"}. All visuals respond to the same song transport as the lighting and lasers.</footer>
  </main>;
 }

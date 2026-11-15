@@ -151,3 +151,5 @@ There is no repository-wide license file at present. Public source access does n
 ## Ketamind · Wonky 15
 
 Audition fifteen original, beat-driven visuals at `/ketamind`, or choose **Ketamind · Wonky 15** in the live console's Visuals collection. Each has distinct geometry and a different rhythmic assignment. See [the pairings and offline audition guide](docs/ketamind-wonky-15.md).
+
+The follow-up [Unbranded 10](docs/ketamind-unbranded-10.md) collection adds ten more logo-free scenes at `/ketamind-2`. Its offline player opens with only the visuals visible; the original fifteen remain available.

@@ -14,7 +14,17 @@ export const KETAMIND_VISUALS = [
   {id:'eyeball-carousel',label:'Eyeball Carousel',pairing:'Quarter-note pupil contractions with an eight-beat orbit and snare blinks.',color:'#f4b3ff'},
   {id:'jellyfish-switchyard',label:'Jellyfish Switchyard',pairing:'Offbeat jellyfish propulsion; triplet tentacle sparks; drop expansion.',color:'#469dff'},
   {id:'ketamind-singularity',label:'Ketamind Singularity',pairing:'Sixteen-beat accretion spiral; kicks bend spacetime; drops fracture the ring.',color:'#ffae56'},
-].map((v,index)=>({...v,index,group:'Ketamind · Wonky 15',src:`ketamind:${v.id}`,poster:`/ketamind/renders/${v.id}.png`}));
+  {id:'taffy-cyclotron',label:'Taffy Cyclotron',pairing:'Quarter notes stretch the candy torus; triplets braid its strands.',color:'#ff6bc8'},
+  {id:'manta-melt',label:'Manta Melt',pairing:'Offbeat wing thrusts and half-time tail snaps; drops expand the fins.',color:'#48ffcd'},
+  {id:'frogspawn-machine',label:'Frogspawn Machine',pairing:'Triplet cell contractions; quarter-note nuclei swell inside the spawn.',color:'#b4ff49'},
+  {id:'prism-gremlin',label:'Prism Gremlin',pairing:'Snare hits flip the origami shards; eighth notes rotate their facets.',color:'#ff784b'},
+  {id:'neon-bone-orchard',label:'Neon Bone Orchard',pairing:'Half-time bone branches grow; quarter notes pulse the joints.',color:'#d6caff'},
+  {id:'accordion-abyss',label:'Accordion Abyss',pairing:'Eighth-note folds compress the zigzag corridor; drops widen its throat.',color:'#40c7ff'},
+  {id:'slink-contraption',label:'Slink Contraption',pairing:'Sixteenth-note traveling waves coil the spring; kicks squash its height.',color:'#ffd738'},
+  {id:'molten-marbles',label:'Molten Marbles',pairing:'Quarter-note collisions fling liquid spheres; snare hits split their highlights.',color:'#ff5784'},
+  {id:'wobble-pudding',label:'Wobble Pudding',pairing:'Four-beat jelly-cube rotation with kick squash and snare surface ripples.',color:'#5c9eff'},
+  {id:'elastic-imp',label:'Elastic Imp',pairing:'Half-time snare grins, quarter-note cheek inflation and triplet horn twitches.',color:'#f5a8ff'},
+].map((v,index)=>({...v,index,...(index>=15?{logoFree:true}:{}),group:index<15?'Ketamind · Wonky 15':'Ketamind · Unbranded 10',src:`ketamind:${v.id}`,poster:`/${index<15?'ketamind':'ketamind-2'}/renders/${v.id}.png`}));
 
 export function ketamindIndex(src:string) { return KETAMIND_VISUALS.findIndex(v=>v.src===src); }
 const phase=(x:number)=>x-Math.floor(x);
