@@ -1,0 +1,2 @@
+# Optional metadata integration; isolated from the JavaScript runtime.
+mornye==2.1.2

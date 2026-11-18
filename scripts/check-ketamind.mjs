@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {access,readFile} from 'node:fs/promises';
-import {KETAMIND_VISUALS,ketamindIndex,ketamindRhythm} from '../src/lib/visuals/ketamind.ts';
+import {KETAMIND_VISUALS,ketamindAutoSrc,ketamindIndex,ketamindRhythm} from '../src/lib/visuals/ketamind.ts';
 assert.equal(KETAMIND_VISUALS.length,25);
 assert.equal(new Set(KETAMIND_VISUALS.map(v=>v.src)).size,25);
 for(const visual of KETAMIND_VISUALS){assert.equal(ketamindIndex(visual.src),visual.index);await access(`public${visual.poster}`);assert.ok(visual.pairing.length>30);}
@@ -22,3 +22,8 @@ assert.equal(more.length,10);
 assert.ok(more.every(v=>v.logoFree===true));
 const cleanPlayer=await readFile('public/ketamind-2/wonky-10.html','utf8');assert.ok(cleanPlayer.includes('<body class="clean">'),'The new player must open without labels or branding');
 console.log('PASS: 25 unique visuals, original 15 preserved plus 10 logo-free scenes, assets/export parity, exact quarter/half-time/triplet/sixteenth accents, drop decay, deterministic pause/seeks and invalid-clock handling.');
+
+assert.equal(new Set(Array.from({length:25},(_,i)=>ketamindAutoSrc(i*32))).size,25);
+assert.equal(ketamindAutoSrc(31.999),KETAMIND_VISUALS[0].src);
+assert.equal(ketamindAutoSrc(32),KETAMIND_VISUALS[1].src);
+assert.equal(ketamindAutoSrc(800),KETAMIND_VISUALS[0].src);

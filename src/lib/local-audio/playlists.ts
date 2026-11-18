@@ -19,10 +19,10 @@ async function save(playlists: LocalPlaylist[]) {
   await rename(temporary, PLAYLIST_PATH);
 }
 
-export async function createPlaylist(name: string) {
+export async function createPlaylist(name: string, trackIds: string[] = []) {
   const playlists = await readPlaylists();
   const now = new Date().toISOString();
-  const playlist: LocalPlaylist = { id: randomUUID(), name, trackIds: [], createdAt: now, updatedAt: now };
+  const playlist: LocalPlaylist = { id: randomUUID(), name, trackIds, createdAt: now, updatedAt: now };
   playlists.push(playlist); await save(playlists); return playlist;
 }
 

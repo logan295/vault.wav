@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {spotifyMetadataUrl,matchLinkTrack} from '../src/lib/local-audio/link-import.ts';
+import {musicalKeyColor} from '../src/lib/local-audio/key-color.ts';
+assert.equal(spotifyMetadataUrl('https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC?si=test'),'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC');
+for(const url of ['http://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC','https://evil.test/track/4uLU6hMCjMI75M1A2tKUQC','https://open.spotify.com:444/track/4uLU6hMCjMI75M1A2tKUQC','https://open.spotify.com/playlist/short','file:///etc/passwd'])assert.equal(spotifyMetadataUrl(url),null);
+const remote={title:'Rain Dance',artist:'Jaenga',durationSecs:194};const local={id:'a',title:'Rain Dance',artist:'Jaenga',durationSecs:195,available:true};
+assert.equal(matchLinkTrack(remote,[local]).trackId,'a');
+assert.equal(matchLinkTrack(remote,[local,{...local,id:'b'}]).status,'Ambiguous');
+assert.equal(matchLinkTrack(remote,[{...local,available:false}]).status,'Not in library');
+assert.equal(matchLinkTrack(remote,[{...local,durationSecs:200}]).trackId,null);
+assert.equal(musicalKeyColor('F minor').code,'4A');assert.equal(musicalKeyColor('Ab').code,'4B');assert.equal(musicalKeyColor('G# major').code,'4B');assert.equal(musicalKeyColor('8a').code,'8A');assert.equal(musicalKeyColor('unknown').color,'#c5c9ce');
+console.log('PASS: public-link allowlist, unique local matching, ambiguity and duration guards, Camelot enharmonic key colors.');

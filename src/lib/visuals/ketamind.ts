@@ -1,3 +1,11 @@
+export const KETAMIND_FAMILIES = {
+ kick: {label:'Kick / impact', color:'#c1ff3c'},
+ snare: {label:'Snare / half-time', color:'#ff8097'},
+ triplet: {label:'Triplet / swing', color:'#c5a6ff'},
+ subdivision: {label:'Eighths / sixteenths', color:'#64ddff'},
+ phrase: {label:'Bar / phrase', color:'#ffd078'},
+};
+const families: (keyof typeof KETAMIND_FAMILIES)[] = ['kick','snare','triplet','kick','kick','phrase','subdivision','snare','kick','subdivision','snare','phrase','kick','triplet','phrase','kick','snare','triplet','snare','snare','subdivision','subdivision','kick','phrase','snare'];
 export const KETAMIND_VISUALS = [
   {id:'gloop-cathedral',label:'Gloop Cathedral',pairing:'Quarter-note kicks inflate the liquid columns; drops open the chamber.',color:'#baff28'},
   {id:'jawbreaker-oracle',label:'Jawbreaker Oracle',pairing:'Half-time snares snap the teeth shut; kicks dilate the mouth.',color:'#ff518c'},
@@ -24,7 +32,9 @@ export const KETAMIND_VISUALS = [
   {id:'molten-marbles',label:'Molten Marbles',pairing:'Quarter-note collisions fling liquid spheres; snare hits split their highlights.',color:'#ff5784'},
   {id:'wobble-pudding',label:'Wobble Pudding',pairing:'Four-beat jelly-cube rotation with kick squash and snare surface ripples.',color:'#5c9eff'},
   {id:'elastic-imp',label:'Elastic Imp',pairing:'Half-time snare grins, quarter-note cheek inflation and triplet horn twitches.',color:'#f5a8ff'},
-].map((v,index)=>({...v,index,...(index>=15?{logoFree:true}:{}),group:index<15?'Ketamind · Wonky 15':'Ketamind · Unbranded 10',src:`ketamind:${v.id}`,poster:`/${index<15?'ketamind':'ketamind-2'}/renders/${v.id}.png`}));
+].map((v,index)=>({...v,index,family:families[index],familyLabel:KETAMIND_FAMILIES[families[index]].label,color:KETAMIND_FAMILIES[families[index]].color,...(index>=15?{logoFree:true}:{}),group:index<15?'Ketamind · Wonky 15':'Ketamind · Unbranded 10',src:`ketamind:${v.id}`,poster:`/${index<15?'ketamind':'ketamind-2'}/renders/${v.id}.png`}));
+
+export function ketamindAutoSrc(beat:number) { return KETAMIND_VISUALS[Math.floor((Number.isFinite(beat)?Math.max(0,beat):0) / 32) % KETAMIND_VISUALS.length].src; }
 
 export function ketamindIndex(src:string) { return KETAMIND_VISUALS.findIndex(v=>v.src===src); }
 const phase=(x:number)=>x-Math.floor(x);

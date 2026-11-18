@@ -11,7 +11,7 @@ import * as THREE from "three";
 import { useLiveShow } from "./use-live-show";
 import { LiveInputControls } from "./live-input-controls";
 import { useLocalPlayback, type PlaybackSample } from "./local-playback-provider";
-import { KETAMIND_VISUALS, ketamindIndex } from "@/lib/visuals/ketamind";
+import { KETAMIND_VISUALS, ketamindAutoSrc, ketamindIndex } from "@/lib/visuals/ketamind";
 import { KetamindMaterial } from "./ketamind-material";
 import { VfxVideoMaterial, type VideoFit } from "./vfx-video-material";
 import { ShrineVenue, SHRINE_LASERS } from "./shrine-venue";
@@ -480,7 +480,7 @@ function LaserStage({ bands, progress, duration, timelineTime, playing, bpm, bea
     )}
     {!circular && !blackout && (showLasers || showLights) && <BeatDeck beat={beatHit} downbeat={downbeatHit} color={colors[pattern % colors.length]} />}
     {!blackout && showScreens && screens.map((screen, index) => <group key={`${screenLayout}-screen-${index}`}>
-      {screenContent === "vj-pack" ? <VjWall fit={videoFit} arenaFrame={arenaFrame} src={selectedVj || VJ_LOOPS[(mediaScene + index * 3) % VJ_LOOPS.length].src} position={screen.position} rotation={screen.rotation} scale={screen.scale} shape={screen.shape} playing={playing} speed={cue.speed * sectionMotion} impact={rhythmicImpact} power={ledPower} /> : <LedWall arenaFrame={arenaFrame} position={screen.position} rotation={screen.rotation} scale={screen.scale} shape={screen.shape} energy={energy} bass={bass} mids={mids} highs={highs} impact={rhythmicImpact} pattern={(pattern + screen.patternOffset) % 16} time={songTime + index * .65} power={ledPower * (index ? .9 : 1)} />}
+      {screenContent === "vj-pack" ? <VjWall fit={videoFit} arenaFrame={arenaFrame} src={selectedVj === "ketamind-auto" ? ketamindAutoSrc(showBeat) : selectedVj || VJ_LOOPS[(mediaScene + index * 3) % VJ_LOOPS.length].src} position={screen.position} rotation={screen.rotation} scale={screen.scale} shape={screen.shape} playing={playing} speed={cue.speed * sectionMotion} impact={rhythmicImpact} power={ledPower} /> : <LedWall arenaFrame={arenaFrame} position={screen.position} rotation={screen.rotation} scale={screen.scale} shape={screen.shape} energy={energy} bass={bass} mids={mids} highs={highs} impact={rhythmicImpact} pattern={(pattern + screen.patternOffset) % 16} time={songTime + index * .65} power={ledPower * (index ? .9 : 1)} />}
       {!(circular && screen.shape === "diamond") && <ScreenPracticalLights screen={screen} color={lightPalette[(index + pattern) % lightPalette.length]} energy={energy} impact={rhythmicImpact} power={(blackout ? 0 : ledPower) * fixtureGate(showBeat, index, screens.length, pattern, true, rhythmStyle)} />}
     </group>)}
     {!circular && <><Truss position={[0, 4.68, -4.5]} scale={[5.65, 1, 1]} /><Truss position={[0, 4.42, -2.55]} scale={[4.8, 1, 1]} />
@@ -675,6 +675,7 @@ export function LaserShowRenderer({ trackId: localTrackId, progress: localProgre
   }
   const liveVisual = screenContent === "vj-pack" && selectedVj ? selectedVj : screenContent;
   function changeVisual(value: string) {
+    if (value === "ketamind-auto") { setSelectedVj(value); setScreenContent("vj-pack"); return; }
     const loop = VJ_LOOPS.find((item) => item.src === value);
     setSelectedVj(loop?.src ?? null);
     setScreenContent(loop ? "vj-pack" : value as ScreenContent);

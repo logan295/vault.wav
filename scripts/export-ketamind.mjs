@@ -5,7 +5,7 @@ const more=process.argv.includes('--more');
 const KETAMIND_VISUALS=more?ALL_VISUALS.slice(15):ALL_VISUALS.slice(0,15);
 const dir=more?'public/ketamind-2':'public/ketamind';await mkdir(dir,{recursive:true});
 await writeFile(`${dir}/beat-pairings.json`,JSON.stringify(KETAMIND_VISUALS,null,2)+'\n');
-await writeFile(`${dir}/beat-pairings.csv`,'Visual,Beat pairing\n'+KETAMIND_VISUALS.map(v=>[v.label,v.pairing].map(x=>'"'+x.replaceAll('"','""')+'"').join(',')).join('\n')+'\n');
+await writeFile(`${dir}/beat-pairings.csv`,'Visual,Rhythm group,Color,Beat pairing\n'+KETAMIND_VISUALS.map(v=>[v.label,v.familyLabel,v.color,v.pairing].map(x=>'"'+x.replaceAll('"','""')+'"').join(',')).join('\n')+'\n');
 const motifs=[
  '<path d="M70 155Q85 20 100 155M125 150Q140 0 155 150M180 155Q195 20 210 155M235 150Q250 0 265 150"/>',
  '<ellipse cx="160" cy="90" rx="112" ry="60"/><path d="M65 60l15 45 15-45 15 45 15-45 15 45 15-45 15 45 15-45 15 45 15-45 15 45 15-45"/>',
